@@ -1,6 +1,8 @@
 ## ISM330DHCX
 **Example usage of ISM330DHCX sensor and some of its internal features.**
 
+*Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
+
 ### Harware used:
 - STM32F446RE
 - Adafruit ISM330DHCX module
