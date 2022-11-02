@@ -1,2 +1,16 @@
-# ISM330DHCX-bare-metal-STM32
-A basic interface wit ST ISM330DHCX: 6-dof IMU, free-falling, double-tap and pedometer. Written for STM32 Nucleo.
+## ISM330DHCX
+**Example usage of ISM330DHCX sensor and some of its internal features.**
+
+### Harware used:
+- STM32F446RE
+- Adafruit ISM330DHCX module
+
+### Features covered:
+- Accelerometer and gyroscope.
+- IMU orientation.
+- 6D tilt orientation.
+- Free falling detection.
+- Double tap detection.
+- Pedometer.
+
+*Unfortunately, Finite State Machine and Machine Learning Core is not included.*
