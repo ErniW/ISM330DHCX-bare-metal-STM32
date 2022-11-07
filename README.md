@@ -3,6 +3,8 @@
 
 *Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
 
+*Application note: https://www.st.com/resource/en/application_note/an5398-ism330dhcx-alwayson-3d-accelerometer-and-3d-gyroscope-with-digital-output-for-industrial-applications-stmicroelectronics.pdf*
+
 ### Harware used:
 - STM32F446RE
 - Adafruit ISM330DHCX module
