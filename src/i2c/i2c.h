@@ -1,13 +1,16 @@
+#pragma once
+
 #include "stm32f446xx.h"
 
 class I2C {
 public:
-    I2C();
-protected:
-    void read();
+    I2C(I2C_TypeDef* i2c);
+    void init();
+// protected:
+    void write(uint8_t address, uint8_t reg, char* data);
+    void read(uint8_t address, uint8_t reg, char* buffer, int n);
     void readBuffer();
-    void write();
 private:
-    I2C_TypeDef _i2c;
+    I2C_TypeDef* _i2c;
     uint8_t _state;
 };

@@ -1,9 +1,5 @@
 .vscode
-build/CMakeFiles
-build/cmake_install.cmake
-build/CMakeCache.txt
-build/ISM330
-build/STM32F446RE
-*.bin
-*.elf
-CMSIS/Include
+build/
+bin/
+CMSIS/
+!.gitkeep

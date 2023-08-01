@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(blink VERSION 1.0.0 LANGUAGES ASM C CXX)
+project(ism330 VERSION 1.0.0 LANGUAGES ASM C CXX)
 
 # Use arm-none-eabi toolchain
 include(cmake/ARM_toolchain.cmake)
@@ -18,6 +18,7 @@ set(CMSIS_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/CMSIS/Include")
 # Sources
 set(SOURCES 
     src/main.cpp
+    # src/i2c/i2c.cpp
 )
 
 # This prevents linker from "-rdynamic" error.
@@ -38,8 +39,17 @@ set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
 
 # Link STM32F446RE startup code with rest of the code.
 add_subdirectory(STM32F446RE)
+add_subdirectory(src/uart)
+add_subdirectory(src/i2c)
+add_subdirectory(src/ism330)
+
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
-target_link_libraries(${PROJECT_NAME}.elf PRIVATE STM32F446)
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE 
+    STM32F446
+    I2Clib
+    ISM330lib
+    UARTlib
+)
 
 # Compile the bin file to upload.
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD

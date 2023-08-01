@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/STM32-CMake-boilerplate
+CMAKE_SOURCE_DIR = /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/ISM330DHCX-bare-metal-STM32
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/STM32-CMake-boilerplate/build
+CMAKE_BINARY_DIR = /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/ISM330DHCX-bare-metal-STM32/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/STM32-CMake-boilerplate/build/CMakeFiles /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/STM32-CMake-boilerplate/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/ISM330DHCX-bare-metal-STM32/build/CMakeFiles /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/ISM330DHCX-bare-metal-STM32/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/STM32-CMake-boilerplate/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /media/ernest/200C4DDA0C4DAC1A/Users/ernes/Documents/GitHub/ISM330DHCX-bare-metal-STM32/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,17 +117,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named blink.elf
+# Target rules for targets named ism330.elf
 
 # Build rule for target.
-blink.elf: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 blink.elf
-.PHONY : blink.elf
+ism330.elf: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ism330.elf
+.PHONY : ism330.elf
 
 # fast build rule for target.
-blink.elf/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/blink.elf.dir/build.make CMakeFiles/blink.elf.dir/build
-.PHONY : blink.elf/fast
+ism330.elf/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ism330.elf.dir/build.make CMakeFiles/ism330.elf.dir/build
+.PHONY : ism330.elf/fast
 
 #=============================================================================
 # Target rules for targets named STM32F446
@@ -142,12 +142,51 @@ STM32F446/fast:
 	$(MAKE) $(MAKESILENT) -f STM32F446RE/CMakeFiles/STM32F446.dir/build.make STM32F446RE/CMakeFiles/STM32F446.dir/build
 .PHONY : STM32F446/fast
 
+#=============================================================================
+# Target rules for targets named UARTlib
+
+# Build rule for target.
+UARTlib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 UARTlib
+.PHONY : UARTlib
+
+# fast build rule for target.
+UARTlib/fast:
+	$(MAKE) $(MAKESILENT) -f src/uart/CMakeFiles/UARTlib.dir/build.make src/uart/CMakeFiles/UARTlib.dir/build
+.PHONY : UARTlib/fast
+
+#=============================================================================
+# Target rules for targets named I2Clib
+
+# Build rule for target.
+I2Clib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 I2Clib
+.PHONY : I2Clib
+
+# fast build rule for target.
+I2Clib/fast:
+	$(MAKE) $(MAKESILENT) -f src/i2c/CMakeFiles/I2Clib.dir/build.make src/i2c/CMakeFiles/I2Clib.dir/build
+.PHONY : I2Clib/fast
+
+#=============================================================================
+# Target rules for targets named ISM330lib
+
+# Build rule for target.
+ISM330lib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ISM330lib
+.PHONY : ISM330lib
+
+# fast build rule for target.
+ISM330lib/fast:
+	$(MAKE) $(MAKESILENT) -f src/ism330/CMakeFiles/ISM330lib.dir/build.make src/ism330/CMakeFiles/ISM330lib.dir/build
+.PHONY : ISM330lib/fast
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
 # target to build an object file
 src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/blink.elf.dir/build.make CMakeFiles/blink.elf.dir/src/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ism330.elf.dir/build.make CMakeFiles/ism330.elf.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
@@ -155,7 +194,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/blink.elf.dir/build.make CMakeFiles/blink.elf.dir/src/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ism330.elf.dir/build.make CMakeFiles/ism330.elf.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
 src/main.s: src/main.cpp.s
@@ -163,7 +202,7 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/blink.elf.dir/build.make CMakeFiles/blink.elf.dir/src/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ism330.elf.dir/build.make CMakeFiles/ism330.elf.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
 # Help Target
@@ -174,8 +213,11 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... I2Clib"
+	@echo "... ISM330lib"
 	@echo "... STM32F446"
-	@echo "... blink.elf"
+	@echo "... UARTlib"
+	@echo "... ism330.elf"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

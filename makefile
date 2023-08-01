@@ -1,4 +1,4 @@
-PROJECT_NAME = blink
+PROJECT_NAME = ism330
 
 MAKEFLAGS += --no-print-directory
 
