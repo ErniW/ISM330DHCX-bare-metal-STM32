@@ -7,7 +7,7 @@ public:
     I2C(I2C_TypeDef* i2c);
     void init();
 // protected:
-    void write(uint8_t address, uint8_t reg, char* data);
+    void write(uint8_t address, uint8_t reg, uint8_t data);
     void read(uint8_t address, uint8_t reg, char* buffer, int n);
     void readBuffer();
 private:

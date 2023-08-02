@@ -18,6 +18,7 @@ set(CMSIS_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/CMSIS/Include")
 # Sources
 set(SOURCES 
     src/main.cpp
+    src/systick/systick.cpp
     # src/i2c/i2c.cpp
 )
 

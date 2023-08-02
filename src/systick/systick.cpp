@@ -1,0 +1,20 @@
+#include "systick.h"
+
+volatile uint32_t ms_counter = 0;
+
+void SysTick_Init(){
+    SysTick->VAL = 0;
+    SysTick->LOAD = (16000000 / 1000)- 1;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
+                    SysTick_CTRL_TICKINT_Msk |
+                    SysTick_CTRL_ENABLE_Msk;
+}
+
+void SysTick_Handler(){
+    if (ms_counter) ms_counter--;
+}
+
+void delay_ms(uint32_t ms){
+    ms_counter = ms;
+    while (ms_counter);
+}
