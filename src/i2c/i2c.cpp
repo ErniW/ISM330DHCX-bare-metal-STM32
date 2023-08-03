@@ -1,8 +1,5 @@
 #include "i2c.h"
 
-#include <cstdio>
-#include <string.h>
-
 //#define I2C_100KHZ 80
 #define SD_MODE_MAX_RISE_TIME 17
 
@@ -35,14 +32,13 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
     _i2c->DR = reg;
 
     while(!(_i2c->SR1 & I2C_SR1_TXE));
-    // printf("%u\n", data);
     _i2c->DR = data;
 
     while(!(_i2c->SR1 & I2C_SR1_BTF));
     _i2c->CR1 |= I2C_CR1_STOP;
 }
 
-void I2C::read(uint8_t address, uint8_t reg, char* buffer, int n){
+void I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
     
     volatile int tmp;
 
@@ -82,7 +78,7 @@ void I2C::read(uint8_t address, uint8_t reg, char* buffer, int n){
         else{
 
             while (!(_i2c->SR1 & I2C_SR1_RXNE));
-            (*buffer++) = _i2c->DR;
+            *buffer++ = _i2c->DR;
             n--;
         }
     }    

@@ -18,7 +18,7 @@ set(CMSIS_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/CMSIS/Include")
 # Sources
 set(SOURCES 
     src/main.cpp
-    src/systick/systick.cpp
+    # src/systick/systick.cpp
     # src/i2c/i2c.cpp
 )
 
@@ -33,7 +33,7 @@ set(CMAKE_C_FLAGS  "-mcpu=${MCU_ARCH}   \
                     -mfloat-abi=hard    \
                     -mfpu=fpv4-sp-d16   \
                     --specs=nosys.specs \
-                    -O3")
+                    -O3 -Wall")
 
 set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
 
@@ -43,6 +43,7 @@ add_subdirectory(STM32F446RE)
 add_subdirectory(src/uart)
 add_subdirectory(src/i2c)
 add_subdirectory(src/ism330)
+add_subdirectory(src/systick)
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE 
@@ -50,6 +51,7 @@ target_link_libraries(${PROJECT_NAME}.elf PRIVATE
     I2Clib
     ISM330lib
     UARTlib
+    systicklib
 )
 
 # Compile the bin file to upload.

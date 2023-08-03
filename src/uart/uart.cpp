@@ -2,6 +2,15 @@
 
 #define APB1_FREQ 16000000
 
+extern "C" {
+    int __io_putchar(int ch);
+}
+
+int __io_putchar(int ch){
+    tx_send(ch);
+    return ch;
+}
+
 void tx_init(){
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; 
     GPIOA->MODER |= PA2_AF;

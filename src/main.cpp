@@ -3,23 +3,11 @@
 #include "i2c.h"
 #include "ism330.h"
 #include "uart.h"
-#include "systick/systick.h"
+#include "systick.h"
 
 #include <memory>
 #include <cstdio>
 #include <string.h>
-
-extern "C" {
-    int __io_putchar(int ch);
-}
-
-int __io_putchar(int ch){
-    tx_send(ch);
-    return ch;
-}
-
-#define PA5_OUTPUT  (1 << 10)
-#define LED_PIN     (1 << 5)
 
 #define PB8_AF_MODE (1 << 17)
 #define PB9_AF_MODE (1 << 19)
@@ -47,19 +35,28 @@ int main(){
     SysTick_Init();
 
     i2c->init();
-    ISM330->init();
+    ISM330->init(
+        FREQ_416_HZ,
+        ACCEL_2G,
+        FREQ_416_HZ,
+        GYRO_2000_DPS
+    );
 
     while(1){
 
-        int16_t ax, ay, az, gx, gy, gz;
+        // int16_t ax, ay, az, gx, gy, gz;
 
-        ISM330->readAccel(ax, ay, az);
-        ISM330->readGyro(gx, gy, gz);
+        // readAccel(ax, ay, az);
+        // readGyro(gx, gy, gz);
 
-        printf("Acc: %d, %d, %d \tGyro: %d, %d, %d\n", ax, ay, az, gx, gy, gz);
+        // printf("Acc: %d, %d, %d \tGyro: %d, %d, %d\n", ax, ay, az, gx, gy, gz);
 
-        delay_ms(50);
+        // delay_ms(50);
 
+        float x, y, z;
+        ISM330->getIMU(x,y,z);
+        printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", x, y, z);
+        delay_ms(10);
     }
 
 }
