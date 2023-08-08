@@ -2,10 +2,6 @@
 
 #define APB1_FREQ 16000000
 
-extern "C" {
-    int __io_putchar(int ch);
-}
-
 int __io_putchar(int ch){
     tx_send(ch);
     return ch;

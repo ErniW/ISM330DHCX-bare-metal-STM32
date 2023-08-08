@@ -9,11 +9,11 @@
 - STM32F446RE
 - Adafruit ISM330DHCX module
 
-### Compile and upload:
-- **GNU Make and arm-none-eabi-gcc toolchain is required.** Type `make compile` to compile.
-- **To upload to your board use ST-Link.** In makefile change it's directory. Then type `make upload` in terminal. https://github.com/stlink-org/stlink
-
-*Or you can copy and paste code into STM32CubeIDE.*
+### Build, compile and upload:
+1. In root `CMakeLists.txt` change the CMSIS directory or copy CMSIS to `CMSIS` folder. Furthermore, if you have a different board you must update the files, see the structure of `STM32F446RE` folder.
+2. **CMake build:** on Linux run `build_cmake.sh`, or `cmake -S . -B build`.
+3. **Compile:** run `make compile`. The binaries will be in `bin` folder.
+4. **Upload:** run `make upload`. Remember to set the ST-Link directory if you are using windows. Remember to change the file name in makefile if you change project name in CMake.
 
 ### Features covered:
 - Accelerometer and gyroscope.

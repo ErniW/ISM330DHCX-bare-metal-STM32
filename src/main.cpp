@@ -42,7 +42,34 @@ int main(){
         GYRO_2000_DPS
     );
 
+    // ISM330->enablePedometer();
+
+    ISM330->enableSingleTap();
+
     while(1){
+
+        volatile uint8_t tap;
+
+        ISM330->readSingleTap(tap);
+
+        if(tap & SINGLE_TAP){
+             printf("Tap\t %u", tap);
+
+            if(tap & isTapX){
+                if(tap & tapSign) printf("+X tap\n");
+                else printf("-X tap \n");
+            }
+            else if(tap & isTapY){
+                if(tap & tapSign) printf("+Y tap \n");
+                else printf("-Y tap \n");
+            }
+            else if(tap & isTapZ){
+                if(tap & tapSign) printf("+Z tap \n");
+                else printf("-Z tap \n");
+            }
+
+        }
+        delay_ms(10);
 
         // int16_t ax, ay, az, gx, gy, gz;
 
@@ -53,10 +80,18 @@ int main(){
 
         // delay_ms(50);
 
-        float x, y, z;
-        ISM330->getIMU(x,y,z);
-        printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", x, y, z);
-        delay_ms(10);
+        // float x, y, z;
+        // ISM330->getIMU(x,y,z);
+        // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", x, y, z);
+        // // delay_ms(10);
+
+        // int16_t steps;
+
+        // ISM330->readPedometer(steps);
+
+        // printf("Steps: %d\n", steps);
+
+        // delay_ms(100);
     }
 
 }
