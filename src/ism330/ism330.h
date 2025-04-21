@@ -81,20 +81,33 @@ enum freq{
     ACCEL_FREQ_1_6_HZ
 };
 
-enum accelSensitivity{
+enum accelRange{
     ACCEL_2G,
     ACCEL_16G,
     ACCEL_4G,
     ACCEL_8G
 };
 
+
+#define ACCEL_SENSITIVITY_2G    0.061
+#define ACCEL_SENSITIVITY_4G    0.122
+#define ACCEL_SENSITIVITY_8G    0.244
+#define ACCEL_SENSITIVITY_16G   0.488
+
+#define GYRO_SENSITIVITY_125    4.375
+#define GYRO_SENSITIVITY_250    8.75
+#define GYRO_SENSITIVITY_500    17.50
+#define GYRO_SENSITIVITY_1000    35
+#define GYRO_SENSITIVITY_2000    70
+#define GYRO_SENSITIVITY_4000    140
+
 enum gyroDPS{
     GYRO_4000_DPS = 1,
     GYRO_125_DPS = 2,
     GYRO_250_DPS = 0,
-    GYRO_500_DPS = 4,
-    GYRO_1000_DPS = 8,
-    GYRO_2000_DPS = 12,
+    GYRO_500_DPS = (1 << 2),
+    GYRO_1000_DPS = (2 << 2),
+    GYRO_2000_DPS = (3 << 2),
 };
 
 class ISM330DHCX {
@@ -103,6 +116,9 @@ public:
     void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
     void readGyro(int16_t& x, int16_t& y, int16_t& z);
     void readAccel(int16_t& x, int16_t& y, int16_t& z);
+    float getAccelSensitivity(uint8_t accel_range);
+    float getGyroSensitivity(uint8_t gyro_range);
+
     void getIMU(float& roll, float& pitch, float& yaw);
 
     void enablePedometer();
@@ -112,6 +128,8 @@ public:
     uint8_t readSingleTap();
 
 private:
+    float gyroSensitivity;
+    float accelSensitivity;
     uint8_t _address;
     I2C* _i2c;
 };

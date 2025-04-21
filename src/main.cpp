@@ -52,6 +52,8 @@ int main(){
             IMU ALGORITHM
 
             A basic IMU implementation with complementary filter.
+
+            TODO: fix yaw frequency in gyroscope. Probably include interrupts on gyroscope data. Otherwise it will accumulate error with each second.
         */
 
         float roll, pitch, yaw;
@@ -59,22 +61,6 @@ int main(){
         ISM330.getIMU(roll, pitch, yaw);
         printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
         delay_ms(10);
-
-
-        // int16_t ax, ay, az, gx, gy, gz;
-
-        // readAccel(ax, ay, az);
-        // readGyro(gx, gy, gz);
-
-        // printf("Acc: %d, %d, %d \tGyro: %d, %d, %d\n", ax, ay, az, gx, gy, gz);
-
-        // delay_ms(50);
-
-        // float x, y, z;
-        // ISM330->getIMU(x,y,z);
-        // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", x, y, z);
-        // // delay_ms(10);
-
 
         /*
             TAP EVENT DETECTION
