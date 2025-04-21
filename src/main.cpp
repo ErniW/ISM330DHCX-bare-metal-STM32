@@ -18,8 +18,8 @@
 #define PB8_PULLUP (1 << 16)
 #define PB9_PULLUP (1 << 18)
 
-I2C* i2c = new I2C(I2C1);
-ISM330DHCX* ISM330 = new ISM330DHCX((uint8_t)ADDRESS, i2c);
+I2C i2c(I2C1);
+ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
 
 int main(){
 
@@ -34,42 +34,32 @@ int main(){
     tx_init();
     SysTick_Init();
 
-    i2c->init();
-    ISM330->init(
+    i2c.init();
+    ISM330.init(
         FREQ_416_HZ,
         ACCEL_2G,
-        FREQ_416_HZ,
+        FREQ_104_HZ,
         GYRO_2000_DPS
     );
 
-    // ISM330->enablePedometer();
+    uint16_t steps_counter = 0;
 
-    ISM330->enableSingleTap();
+    // ISM330.enablePedometer();
+    // ISM330.enableSingleTap();
 
     while(1){
+        /*
+            IMU ALGORITHM
 
-        volatile uint8_t tap;
+            A basic IMU implementation with complementary filter.
+        */
 
-        ISM330->readSingleTap(tap);
-
-        if(tap & SINGLE_TAP){
-             printf("Tap\t %u", tap);
-
-            if(tap & isTapX){
-                if(tap & tapSign) printf("+X tap\n");
-                else printf("-X tap \n");
-            }
-            else if(tap & isTapY){
-                if(tap & tapSign) printf("+Y tap \n");
-                else printf("-Y tap \n");
-            }
-            else if(tap & isTapZ){
-                if(tap & tapSign) printf("+Z tap \n");
-                else printf("-Z tap \n");
-            }
-
-        }
+        float roll, pitch, yaw;
+        
+        ISM330.getIMU(roll, pitch, yaw);
+        printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
         delay_ms(10);
+
 
         // int16_t ax, ay, az, gx, gy, gz;
 
@@ -85,11 +75,51 @@ int main(){
         // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", x, y, z);
         // // delay_ms(10);
 
-        // int16_t steps;
 
-        // ISM330->readPedometer(steps);
+        /*
+            TAP EVENT DETECTION
 
-        // printf("Steps: %d\n", steps);
+            Please be aware that further calibration of threshold is required
+        */
+
+        // uint8_t tap_event = ISM330.readSingleTap();
+
+        // switch(tap_event){
+        //     case TAP_EVENT_X_POSITIVE:
+        //         printf("+X tap\n");
+        //         break;
+        //     case TAP_EVENT_X_NEGATIVE:
+        //         printf("-X tap\n");
+        //         break;
+        //     case TAP_EVENT_Y_POSITIVE:
+        //         printf("+Y tap\n");
+        //         break;
+        //     case TAP_EVENT_Y_NEGATIVE:
+        //         printf("-Y tap\n");
+        //         break;
+        //     case TAP_EVENT_Z_POSITIVE:
+        //         printf("+Z tap\n");
+        //         break;
+        //     case TAP_EVENT_Z_NEGATIVE:
+        //         printf("-Z tap\n");
+        //         break;
+        // }
+
+        // delay_ms(10);
+
+
+        /*
+            PEDOMETER
+
+            Please be aware that pedometer starts transmitting after few counted steps.
+        */
+
+        // uint16_t current_steps = ISM330.readPedometer();
+        
+        // if(current_steps != steps_counter){
+        //     steps_counter = current_steps;
+        //     printf("Steps: %d\n", steps_counter);
+        // }
 
         // delay_ms(100);
     }

@@ -51,18 +51,20 @@
 #define INT1_SINGLE_TAP (1 << 6)
 #define SINGLE_TAP      (1 << 6)
 
-#define isTapX          (1 << 2)
-#define isTapY          (1 << 1)
-#define isTapZ          (1 << 0)
-#define tapSign         (1 << 3)
+#define TAP_X            (1 << 2)
+#define TAP_Y            (1 << 1)
+#define TAP_Z            (1 << 0)
+#define TAP_SIGN         (1 << 3)
 
-#define ACCELEROMETER_SENSITIVITY 0.061f
-#define GYROSCOPE_SENSITIVITY 8.75f
-#define SAMPLE_RATE 416/10
-
-#define ACCELEROMETER_GAIN 0.02f 
-#define GYROSCOPE_GAIN 0.98f
-
+enum TapEvent{
+    TAP_NO_EVENT = 0,
+    TAP_EVENT_X_POSITIVE = TAP_SIGN | TAP_X,
+    TAP_EVENT_X_NEGATIVE = TAP_X,
+    TAP_EVENT_Y_POSITIVE = TAP_SIGN | TAP_Y,
+    TAP_EVENT_Y_NEGATIVE = TAP_Y,
+    TAP_EVENT_Z_POSITIVE = TAP_SIGN | TAP_Z,
+    TAP_EVENT_Z_NEGATIVE = TAP_Z
+};
 
 enum freq{
     POWER_DOWN,
@@ -104,17 +106,11 @@ public:
     void getIMU(float& roll, float& pitch, float& yaw);
 
     void enablePedometer();
-    void readPedometer(int16_t& steps);
-    //void clearPedometer();
+    uint16_t readPedometer();
 
     void enableSingleTap();
-    void readSingleTap(volatile uint8_t& tap);
+    uint8_t readSingleTap();
 
-    // void enableDoubleTap();
-    // void enableTiltDetection();
-    // void enableFreeFall();
-
-    // void interruptHandler();
 private:
     uint8_t _address;
     I2C* _i2c;
