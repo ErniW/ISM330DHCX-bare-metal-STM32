@@ -9,4 +9,5 @@ target_include_directories(ISM330lib PUBLIC
 target_link_libraries(ISM330lib PRIVATE 
     STM32F446 
     I2Clib
+    systicklib
 )

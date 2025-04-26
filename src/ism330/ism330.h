@@ -11,6 +11,9 @@
 #define FUNC_CFG_ACCESS 0x01
 #define EMB_FUNC_EN_A   0x04
 
+#define COUNTER_BDR_REG1    0x0B
+#define INT1_CTRL           0x0D
+
 #define CTRL1_XL    0x10
 #define CTRL2_G     0x11
 #define CTRL3_C     0x12
@@ -51,10 +54,13 @@
 #define INT1_SINGLE_TAP (1 << 6)
 #define SINGLE_TAP      (1 << 6)
 
-#define TAP_X            (1 << 2)
-#define TAP_Y            (1 << 1)
-#define TAP_Z            (1 << 0)
-#define TAP_SIGN         (1 << 3)
+#define TAP_X           (1 << 2)
+#define TAP_Y           (1 << 1)
+#define TAP_Z           (1 << 0)
+#define TAP_SIGN        (1 << 3)
+
+#define INT1_DRDY_G     (1 << 1)
+#define DRDY_PULSE      (1 << 7)
 
 enum TapEvent{
     TAP_NO_EVENT = 0,

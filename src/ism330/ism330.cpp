@@ -1,10 +1,13 @@
 #include "ism330.h"
+#include "systick.h"
 
 ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c) {};
 
 void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, uint8_t gyroDPS){
 
-    _i2c->write(_address, CTRL3_C, (SW_RESET | AUTO_INC));
+    _i2c->write(_address, CTRL3_C, SW_RESET);
+    delay_ms(100);
+    _i2c->write(_address, CTRL3_C, AUTO_INC);
 
     _i2c->write(_address, CTRL1_XL, (accelFreq << 4) | (accelRange << 2));
     _i2c->write(_address, CTRL2_G, (gyroFreq << 4) | gyroDPS);   
@@ -15,7 +18,9 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
 void ISM330DHCX::gyroInterruptEnable()
 {
-    // _i2c->write(_address, CTRL1_XL, (accelFreq << 4) | (accelRange << 2));
+    _i2c->write(_address, COUNTER_BDR_REG1, DRDY_PULSE);
+    _i2c->write(_address, INT1_CTRL, INT1_DRDY_G);
+ 
 }
 
 void ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
@@ -97,22 +102,27 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     float accel_roll  = atan2f(ay, az) * (180.0f / M_PI);
     float accel_pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * (180.0f / M_PI);
 
-    roll  += gyro_roll_rate  * (1.0f / 100);
-    pitch += gyro_pitch_rate * (1.0f / 100);
+    // roll = (float)ax_raw;
+    // pitch = (float)ay_raw;
+    // yaw = (float)az_raw;
 
-    // Apply complementary filter (gyro + accelerometer)
-    roll  = ACCELEROMETER_GAIN * accel_roll  + GYROSCOPE_GAIN * roll;
-    pitch = ACCELEROMETER_GAIN * accel_pitch + GYROSCOPE_GAIN * pitch;
+    printf("%d\n", ax_raw);
+    // // roll  += gyro_roll_rate  * (1.0f / 100);
+    // // pitch += gyro_pitch_rate * (1.0f / 100);
 
-    // Adjust yaw sensitivity slightly (reduce by 10%, instead of 90%)
-    // gyro_yaw_rate *= 0.005f;  // Reduce yaw sensitivity by 10%
+    // // Apply complementary filter (gyro + accelerometer)
+    // roll  = ACCELEROMETER_GAIN * accel_roll ;
+    // pitch = ACCELEROMETER_GAIN * accel_pitch;
 
-    // Integrate yaw
-    yaw += gyro_yaw_rate * (1.0f / 104);
+    // // Adjust yaw sensitivity slightly (reduce by 10%, instead of 90%)
+    // // gyro_yaw_rate *= 0.005f;  // Reduce yaw sensitivity by 10%
+
+    // // Integrate yaw
+    // yaw += gyro_yaw_rate * (1.0f / 104);
 
 
-    if (yaw < 0) yaw += 360;
-    else if (yaw >= 360) yaw -= 360;
+    // if (yaw < 0) yaw += 360;
+    // else if (yaw >= 360) yaw -= 360;
 }
 
 

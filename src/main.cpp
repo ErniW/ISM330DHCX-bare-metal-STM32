@@ -30,6 +30,8 @@ ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
 extern "C" void __disable_irq(void);
 extern "C" void __enable_irq(void);
 
+volatile bool isGyroDataReady = false;
+
 int main(){
 
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
@@ -49,7 +51,7 @@ int main(){
 
     SYSCFG->EXTICR[3] |= EXTI_C12;
     EXTI->IMR |= INT1_PIN;
-    EXTI->FTSR |= INT1_PIN;
+    EXTI->RTSR |= INT1_PIN;
 
     NVIC_EnableIRQ(EXTI15_10_IRQn);
     __enable_irq();
@@ -65,12 +67,41 @@ int main(){
         GYRO_2000_DPS
     );
 
+    // ISM330.gyroInterruptEnable();
+
     uint16_t steps_counter = 0;
 
     // ISM330.enablePedometer();
     // ISM330.enableSingleTap();
 
+    uint32_t previous_time = 0;
+
+    float roll, pitch, yaw;
+
     while(1){
+
+        int16_t ax,ay,az;
+        ISM330.readAccel(ax,ay,az);
+
+        printf("%d %d %d\n", ax,ay,az);
+        delay_ms(100);
+
+        // ISM330.getIMU(roll, pitch, yaw);
+        // delay_ms(40);
+        // if(isGyroDataReady){
+            
+        //     ISM330.getIMU(roll, pitch, yaw);
+        //     isGyroDataReady = false;
+        // }
+
+        // uint32_t time = getMillis();
+
+        // if(time - previous_time > 100){
+
+        //     // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
+        //     previous_time = time;
+        // }
+
         /*
             IMU ALGORITHM
 
@@ -150,7 +181,7 @@ extern "C" void EXTI15_10_IRQHandler(void);
 
 void EXTI15_10_IRQHandler(void){
     if(EXTI->PR & INT1_PIN){
+        isGyroDataReady = true;
         EXTI->PR |= INT1_PIN;
-        GPIOA->ODR ^= LED_PIN;
     }
 }

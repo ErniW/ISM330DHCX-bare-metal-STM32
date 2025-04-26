@@ -1,6 +1,7 @@
 #include "systick.h"
 
 volatile uint32_t ms_counter = 0;
+volatile uint32_t millis = 0;
 
 void SysTick_Init(){
     SysTick->VAL = 0;
@@ -12,9 +13,14 @@ void SysTick_Init(){
 
 void SysTick_Handler(){
     if (ms_counter) ms_counter--;
+    millis++;
 }
 
 void delay_ms(uint32_t ms){
     ms_counter = ms;
     while (ms_counter);
+}
+
+uint32_t getMillis(){
+    return millis;
 }
