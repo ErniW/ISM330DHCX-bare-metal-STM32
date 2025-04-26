@@ -13,6 +13,11 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
     gyroSensitivity = getGyroSensitivity(gyroDPS);
 }
 
+void ISM330DHCX::gyroInterruptEnable()
+{
+    // _i2c->write(_address, CTRL1_XL, (accelFreq << 4) | (accelRange << 2));
+}
+
 void ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
 
     uint8_t buffer[6];

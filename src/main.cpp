@@ -18,8 +18,17 @@
 #define PB8_PULLUP (1 << 16)
 #define PB9_PULLUP (1 << 18)
 
+#define PA5_OUTPUT  (1 << 10)
+#define LED_PIN     (1 << 5)
+
+#define EXTI_C12    (2 << 0)
+#define INT1_PIN    (1 << 12)
+
 I2C i2c(I2C1);
 ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
+
+extern "C" void __disable_irq(void);
+extern "C" void __enable_irq(void);
 
 int main(){
 
@@ -31,6 +40,20 @@ int main(){
     GPIOB->PUPDR |= PB8_PULLUP | PB9_PULLUP;
     GPIOB->AFR[1] |= PB8_AF4_I2C_SCL | PB9_AF4_I2C_SDA;
 
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    GPIOA->MODER |= PA5_OUTPUT;
+
+    __disable_irq();
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+
+    SYSCFG->EXTICR[3] |= EXTI_C12;
+    EXTI->IMR |= INT1_PIN;
+    EXTI->FTSR |= INT1_PIN;
+
+    NVIC_EnableIRQ(EXTI15_10_IRQn);
+    __enable_irq();
+
     tx_init();
     SysTick_Init();
 
@@ -38,7 +61,7 @@ int main(){
     ISM330.init(
         FREQ_416_HZ,
         ACCEL_2G,
-        FREQ_104_HZ,
+        FREQ_416_HZ,
         GYRO_2000_DPS
     );
 
@@ -56,11 +79,22 @@ int main(){
             TODO: fix yaw frequency in gyroscope. Probably include interrupts on gyroscope data. Otherwise it will accumulate error with each second.
         */
 
-        float roll, pitch, yaw;
+        // float roll, pitch, yaw;
         
-        ISM330.getIMU(roll, pitch, yaw);
-        printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
-        delay_ms(10);
+        // ISM330.getIMU(roll, pitch, yaw);
+        // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
+        // delay_ms(10);
+
+        // uint8_t status = 0;
+        // i2c.read(0x6A, 0x1E, &status, 1); // STATUS_REG
+        // if (status & (1 << 1)) { // GDA: Gyro Data Available
+        //     float roll, pitch, yaw;
+        //     ISM330.getIMU(roll, pitch, yaw);
+        //     printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
+        // }
+        // i2c.read(0x6A, 0x1E, &status, 1);
+        // printf("%d\n", status);
+
 
         /*
             TAP EVENT DETECTION
@@ -110,4 +144,13 @@ int main(){
         // delay_ms(100);
     }
 
+}
+
+extern "C" void EXTI15_10_IRQHandler(void);
+
+void EXTI15_10_IRQHandler(void){
+    if(EXTI->PR & INT1_PIN){
+        EXTI->PR |= INT1_PIN;
+        GPIOA->ODR ^= LED_PIN;
+    }
 }

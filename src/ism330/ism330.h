@@ -127,6 +127,7 @@ public:
     void enableSingleTap();
     uint8_t readSingleTap();
 
+    void gyroInterruptEnable();
 private:
     float gyroSensitivity;
     float accelSensitivity;

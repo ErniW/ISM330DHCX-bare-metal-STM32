@@ -1,17 +1,26 @@
 #include "i2c.h"
 
 //#define I2C_100KHZ 80
-#define SD_MODE_MAX_RISE_TIME 17
+// #define SD_MODE_MAX_RISE_TIME 17
+
+#define SYS_CLK 16000000
+#define PCLK1   SYS_CLK
+#define I2C_FREQ 400000
+#define I2C_FAST_MODE_MAX_RISE_TIME 300
+
 
 I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
 
 void I2C::init(){
+    _i2c->CR1 &=~ I2C_CR1_PE;
     _i2c->CR1 |= I2C_CR1_SWRST;
     _i2c->CR1 &=~ I2C_CR1_SWRST;
+    while (_i2c->SR2 & I2C_SR2_BUSY);
 
-    _i2c->CR2 |= 45; //16;
-    _i2c->CCR = 225; //I2C_100KHZ;
-    _i2c->TRISE = SD_MODE_MAX_RISE_TIME;
+    _i2c->CR2 |= (PCLK1 / 1000000);
+    _i2c->CCR = PCLK1 / (3 * I2C_FREQ) | I2C_CCR_FS;
+    _i2c->TRISE = (I2C_FAST_MODE_MAX_RISE_TIME * (PCLK1 / 1000000))/1000 + 1;
+    
     _i2c->CR1 |= I2C_CR1_PE;
 }
 
