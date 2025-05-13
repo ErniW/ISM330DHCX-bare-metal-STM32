@@ -64,10 +64,10 @@ int main(){
         FREQ_416_HZ,
         ACCEL_2G,
         FREQ_416_HZ,
-        GYRO_2000_DPS
+        GYRO_1000_DPS
     );
 
-    ISM330.gyroInterruptEnable();
+    
 
     uint16_t steps_counter = 0;
 
@@ -76,19 +76,43 @@ int main(){
 
     uint32_t previous_time = 0;
 
-    float roll, pitch, yaw;
+    float roll =0;
+    float pitch = 0;
+    float yaw = 0;
+
+    float avgX = 0; 
+    float avgY = 0;
+    float avgZ = 0;
+
+    for(uint8_t i=0; i<10; i++){
+        int16_t gx,gy,gz = 0;
+        ISM330.readGyro(gx,gy,gz);
+        avgX += (float)gx;
+        avgY += (float)gy;
+        avgZ += (float)gz;
+        delay_ms(10);
+    }
+
+    ISM330.gyroCalibrationX = avgX / 100.0;
+    ISM330.gyroCalibrationY = avgY / 100.0;
+    ISM330.gyroCalibrationZ = avgZ / 100.0;
+
+    ISM330.gyroInterruptEnable();
 
     while(1){
         if(isGyroDataReady){
 
-            int16_t gx,gy,gz;
-            ISM330.readGyro(gx,gy,gz);
+            // int16_t gx,gy,gz;
+            // ISM330.readGyro(gx,gy,gz);
 
-            printf("%d, %d, %d\n", gx,gy,gz);
+            // printf("%d, %d, %d\n", gx,gy,gz);
 
             // int16_t ax,ay,az;
             // ISM330.readAccel(ax,ay,az);
             // printf("%d, %d, %d\n", ax,ay,az);
+            
+            ISM330.getIMU(roll,pitch,yaw);
+            printf("%.2f, %.2f, %.2f\n", roll,pitch,yaw);
 
             isGyroDataReady = false;
             GPIOA->ODR ^= LED_PIN;

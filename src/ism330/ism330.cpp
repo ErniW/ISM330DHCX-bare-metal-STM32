@@ -14,6 +14,7 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
     accelSensitivity = getAccelSensitivity(accelRange);
     gyroSensitivity = getGyroSensitivity(gyroDPS);
+    dt = getDt(gyroFreq);
 }
 
 void ISM330DHCX::gyroInterruptEnable()
@@ -80,52 +81,88 @@ float ISM330DHCX::getGyroSensitivity(uint8_t range){
     }
 }
 
+float ISM330DHCX::getDt(uint8_t frequency){
+    switch(frequency){
+        case FREQ_12_5_HZ:
+            return 1.0 / 12.5;
+        case FREQ_26_HZ:
+            return 1.0 / 26.0;
+        case FREQ_52_HZ:
+            return 1.0 / 52.0;
+        case FREQ_104_HZ:
+            return 1.0 / 104.0;
+        case FREQ_208_HZ:
+            return 1.0 / 208.0;
+        case FREQ_416_HZ:
+            return 1.0 / 416.0;
+        case FREQ_833_HZ:
+            return 1.0 / 833.0;
+        case FREQ_1_66_KHZ:
+            return 1.0 / 1660.0;
+        case FREQ_3_33_KHZ:
+            return 1.0 / 3330.0;
+        case FREQ_6_66_KHZ:
+            return 1.0 / 6660.0;
+        case ACCEL_FREQ_1_6_HZ:
+            return 1.0 / 1.6;
+        default:
+            return 0;
+    }
+}
+
 // #define ACCELEROMETER_GAIN          0.98f
 // #define GYROSCOPE_GAIN              0.02f
 // #define SAMPLE_RATE                 100
 
+#define IMU_ALPHA 0.95
+
+float lastTime = 0;
+
 void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
+    float gyroScale = gyroSensitivity * 0.001f;
+    float accelScale = accelSensitivity * 0.00980665f;
+
+    float currentTime = getMillis();
+    float dt2 = (currentTime - lastTime) / 1000.0f; // convert to seconds
+    lastTime = currentTime;
 
     
-    // int16_t ax_raw, ay_raw, az_raw;
-    // int16_t gx_raw, gy_raw, gz_raw;
 
-    // readAccel(ax_raw, ay_raw, az_raw);
-    // readGyro(gx_raw, gy_raw, gz_raw);
+    int16_t ax_raw, ay_raw, az_raw;
+    int16_t gx_raw, gy_raw, gz_raw;
 
-    // float ax = ax_raw * (accelSensitivity / 1000);
-    // float ay = ay_raw * (accelSensitivity / 1000);
-    // float az = az_raw * (accelSensitivity / 1000);
+    readAccel(ax_raw, ay_raw, az_raw);
+    readGyro(gx_raw, gy_raw, gz_raw);
 
-    // float gyro_roll_rate  = gy_raw * (gyroSensitivity / 1000);
-    // float gyro_pitch_rate = gx_raw * (gyroSensitivity / 1000);
-    // float gyro_yaw_rate   = gz_raw * (gyroSensitivity / 1000);
+    float ax = ax_raw * accelScale;
+    float ay = ay_raw * accelScale;
+    float az = az_raw * accelScale;
 
-    // float accel_roll  = atan2f(ay, az) * (180.0f / M_PI);
-    // float accel_pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * (180.0f / M_PI);
+    float gx = (float)gx_raw;
+    float gy = (float)gy_raw;
+    float gz = (float)gz_raw;
 
-    // roll = (float)ax_raw;
-    // pitch = (float)ay_raw;
-    // yaw = (float)az_raw;
+    // gx -= gyroCalibrationX;
+    // gy -= gyroCalibrationY;
+    // gz -= gyroCalibrationZ;
 
-    // printf("%d\n", ax_raw);
-    // // roll  += gyro_roll_rate  * (1.0f / 100);
-    // // pitch += gyro_pitch_rate * (1.0f / 100);
+    gx *= gyroScale;
+    gy *= gyroScale;
+    gz *= gyroScale;
 
-    // // Apply complementary filter (gyro + accelerometer)
-    // roll  = ACCELEROMETER_GAIN * accel_roll ;
-    // pitch = ACCELEROMETER_GAIN * accel_pitch;
+    roll += gx * dt2;
+    pitch += gy * dt2;
+    yaw += gz * dt2;
 
-    // // Adjust yaw sensitivity slightly (reduce by 10%, instead of 90%)
-    // // gyro_yaw_rate *= 0.005f;  // Reduce yaw sensitivity by 10%
+    float accel_pitch = atan2f(ay, sqrtf(ax * ax + az * az)) * 180.0f / M_PI;
+    float accel_roll  = atan2f(-ax, az) * 180.0f / M_PI;
 
-    // // Integrate yaw
-    // yaw += gyro_yaw_rate * (1.0f / 104);
+    pitch = IMU_ALPHA * pitch + (1.0f - IMU_ALPHA) * accel_pitch;
+    roll  = IMU_ALPHA * roll  + (1.0f - IMU_ALPHA) * accel_roll;
 
-
-    // if (yaw < 0) yaw += 360;
-    // else if (yaw >= 360) yaw -= 360;
+    if (yaw > 180.0f) yaw -= 360.0f;
+    if (yaw < -180.0f) yaw += 360.0f;
 }
 
 

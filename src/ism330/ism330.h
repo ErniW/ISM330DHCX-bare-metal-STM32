@@ -103,9 +103,9 @@ enum accelRange{
 #define GYRO_SENSITIVITY_125    4.375
 #define GYRO_SENSITIVITY_250    8.75
 #define GYRO_SENSITIVITY_500    17.50
-#define GYRO_SENSITIVITY_1000    35
-#define GYRO_SENSITIVITY_2000    70
-#define GYRO_SENSITIVITY_4000    140
+#define GYRO_SENSITIVITY_1000    35.0
+#define GYRO_SENSITIVITY_2000    70.0
+#define GYRO_SENSITIVITY_4000    140.0
 
 enum gyroDPS{
     GYRO_4000_DPS = 1,
@@ -134,9 +134,14 @@ public:
     uint8_t readSingleTap();
 
     void gyroInterruptEnable();
+    float getDt(uint8_t frequency);
+    float gyroCalibrationX;
+    float gyroCalibrationY;
+    float gyroCalibrationZ;
 private:
     float gyroSensitivity;
     float accelSensitivity;
+    float dt;
     uint8_t _address;
     I2C* _i2c;
 };
