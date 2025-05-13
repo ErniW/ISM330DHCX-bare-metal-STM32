@@ -33,7 +33,7 @@
 #define EMB_FUNC_STEP_COUNTER_L 0x62
 
 #define SW_RESET    0x01
-#define AUTO_INC    (1 << 3)
+#define AUTO_INC    (1 << 1)
 
 #define FUNC_CFG_ACCESS_EN  (1 << 7)
 #define PEDO_EN             (1 << 3)

@@ -67,7 +67,7 @@ int main(){
         GYRO_2000_DPS
     );
 
-    // ISM330.gyroInterruptEnable();
+    ISM330.gyroInterruptEnable();
 
     uint16_t steps_counter = 0;
 
@@ -79,53 +79,20 @@ int main(){
     float roll, pitch, yaw;
 
     while(1){
+        if(isGyroDataReady){
 
-        int16_t ax,ay,az;
-        ISM330.readAccel(ax,ay,az);
+            int16_t gx,gy,gz;
+            ISM330.readGyro(gx,gy,gz);
 
-        printf("%d %d %d\n", ax,ay,az);
-        delay_ms(100);
+            printf("%d, %d, %d\n", gx,gy,gz);
 
-        // ISM330.getIMU(roll, pitch, yaw);
-        // delay_ms(40);
-        // if(isGyroDataReady){
-            
-        //     ISM330.getIMU(roll, pitch, yaw);
-        //     isGyroDataReady = false;
-        // }
+            // int16_t ax,ay,az;
+            // ISM330.readAccel(ax,ay,az);
+            // printf("%d, %d, %d\n", ax,ay,az);
 
-        // uint32_t time = getMillis();
-
-        // if(time - previous_time > 100){
-
-        //     // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
-        //     previous_time = time;
-        // }
-
-        /*
-            IMU ALGORITHM
-
-            A basic IMU implementation with complementary filter.
-
-            TODO: fix yaw frequency in gyroscope. Probably include interrupts on gyroscope data. Otherwise it will accumulate error with each second.
-        */
-
-        // float roll, pitch, yaw;
-        
-        // ISM330.getIMU(roll, pitch, yaw);
-        // printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
-        // delay_ms(10);
-
-        // uint8_t status = 0;
-        // i2c.read(0x6A, 0x1E, &status, 1); // STATUS_REG
-        // if (status & (1 << 1)) { // GDA: Gyro Data Available
-        //     float roll, pitch, yaw;
-        //     ISM330.getIMU(roll, pitch, yaw);
-        //     printf("Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\n", roll, pitch, yaw);
-        // }
-        // i2c.read(0x6A, 0x1E, &status, 1);
-        // printf("%d\n", status);
-
+            isGyroDataReady = false;
+            GPIOA->ODR ^= LED_PIN;
+        }
 
         /*
             TAP EVENT DETECTION

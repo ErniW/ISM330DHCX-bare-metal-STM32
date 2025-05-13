@@ -7,7 +7,7 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
     _i2c->write(_address, CTRL3_C, SW_RESET);
     delay_ms(100);
-    _i2c->write(_address, CTRL3_C, AUTO_INC);
+    // _i2c->write(_address, CTRL3_C, AUTO_INC);
 
     _i2c->write(_address, CTRL1_XL, (accelFreq << 4) | (accelRange << 2));
     _i2c->write(_address, CTRL2_G, (gyroFreq << 4) | gyroDPS);   
@@ -80,33 +80,36 @@ float ISM330DHCX::getGyroSensitivity(uint8_t range){
     }
 }
 
-#define ACCELEROMETER_GAIN          0.98f
-#define GYROSCOPE_GAIN              0.02f
-#define SAMPLE_RATE                 100
+// #define ACCELEROMETER_GAIN          0.98f
+// #define GYROSCOPE_GAIN              0.02f
+// #define SAMPLE_RATE                 100
 
 void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
-    int16_t ax_raw, ay_raw, az_raw;
-    int16_t gx_raw, gy_raw, gz_raw;
 
-    readAccel(ax_raw, ay_raw, az_raw);
-    readGyro(gx_raw, gy_raw, gz_raw);
 
-    float ax = ax_raw * (accelSensitivity / 1000);
-    float ay = ay_raw * (accelSensitivity / 1000);
-    float az = az_raw * (accelSensitivity / 1000);
+    
+    // int16_t ax_raw, ay_raw, az_raw;
+    // int16_t gx_raw, gy_raw, gz_raw;
 
-    float gyro_roll_rate  = gy_raw * (gyroSensitivity / 1000);
-    float gyro_pitch_rate = gx_raw * (gyroSensitivity / 1000);
-    float gyro_yaw_rate   = gz_raw * (gyroSensitivity / 1000);
+    // readAccel(ax_raw, ay_raw, az_raw);
+    // readGyro(gx_raw, gy_raw, gz_raw);
 
-    float accel_roll  = atan2f(ay, az) * (180.0f / M_PI);
-    float accel_pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * (180.0f / M_PI);
+    // float ax = ax_raw * (accelSensitivity / 1000);
+    // float ay = ay_raw * (accelSensitivity / 1000);
+    // float az = az_raw * (accelSensitivity / 1000);
+
+    // float gyro_roll_rate  = gy_raw * (gyroSensitivity / 1000);
+    // float gyro_pitch_rate = gx_raw * (gyroSensitivity / 1000);
+    // float gyro_yaw_rate   = gz_raw * (gyroSensitivity / 1000);
+
+    // float accel_roll  = atan2f(ay, az) * (180.0f / M_PI);
+    // float accel_pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * (180.0f / M_PI);
 
     // roll = (float)ax_raw;
     // pitch = (float)ay_raw;
     // yaw = (float)az_raw;
 
-    printf("%d\n", ax_raw);
+    // printf("%d\n", ax_raw);
     // // roll  += gyro_roll_rate  * (1.0f / 100);
     // // pitch += gyro_pitch_rate * (1.0f / 100);
 
