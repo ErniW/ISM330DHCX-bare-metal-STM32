@@ -114,7 +114,7 @@ float ISM330DHCX::getDt(uint8_t frequency){
 // #define GYROSCOPE_GAIN              0.02f
 // #define SAMPLE_RATE                 100
 
-#define IMU_ALPHA 0.95
+#define IMU_ALPHA 0.98
 
 float lastTime = 0;
 
@@ -143,9 +143,9 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     float gy = (float)gy_raw;
     float gz = (float)gz_raw;
 
-    // gx -= gyroCalibrationX;
-    // gy -= gyroCalibrationY;
-    // gz -= gyroCalibrationZ;
+    gx -= gyroCalibrationX;
+    gy -= gyroCalibrationY;
+    gz -= gyroCalibrationZ;
 
     gx *= gyroScale;
     gy *= gyroScale;
