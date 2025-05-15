@@ -141,7 +141,6 @@ public:
 private:
     float gyroSensitivity;
     float accelSensitivity;
-    float dt;
     uint8_t _address;
     I2C* _i2c;
 };

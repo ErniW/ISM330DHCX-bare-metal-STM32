@@ -84,13 +84,14 @@ int main(){
     float avgY = 0;
     float avgZ = 0;
 
+    delay_ms(100);
     for(uint8_t i=0; i<100; i++){
         int16_t gx,gy,gz = 0;
         ISM330.readGyro(gx,gy,gz);
         avgX += (float)gx;
         avgY += (float)gy;
         avgZ += (float)gz;
-        delay_ms(100);
+        delay_ms(10);
     }
 
     ISM330.gyroCalibrationX = avgX / 100.0;

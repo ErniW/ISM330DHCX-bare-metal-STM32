@@ -14,7 +14,6 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
     accelSensitivity = getAccelSensitivity(accelRange);
     gyroSensitivity = getGyroSensitivity(gyroDPS);
-    dt = getDt(gyroFreq);
 }
 
 void ISM330DHCX::gyroInterruptEnable()
@@ -115,6 +114,7 @@ float ISM330DHCX::getDt(uint8_t frequency){
 // #define SAMPLE_RATE                 100
 
 #define IMU_ALPHA 0.98
+#define GYRO_NOISE_THRESHOLD 10
 
 float lastTime = 0;
 
@@ -124,10 +124,8 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     float accelScale = accelSensitivity * 0.00980665f;
 
     float currentTime = getMillis();
-    float dt2 = (currentTime - lastTime) / 1000.0f; // convert to seconds
+    float dt = (currentTime - lastTime) / 1000.0f; // convert to seconds
     lastTime = currentTime;
-
-    
 
     int16_t ax_raw, ay_raw, az_raw;
     int16_t gx_raw, gy_raw, gz_raw;
@@ -139,21 +137,21 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     float ay = ay_raw * accelScale;
     float az = az_raw * accelScale;
 
-    float gx = (float)gx_raw;
-    float gy = (float)gy_raw;
-    float gz = (float)gz_raw;
+    float gx = (float)gx_raw - gyroCalibrationX;
+    float gy = (float)gy_raw - gyroCalibrationY;
+    float gz = (float)gz_raw - gyroCalibrationZ;
 
-    gx -= gyroCalibrationX;
-    gy -= gyroCalibrationY;
-    gz -= gyroCalibrationZ;
+    if (fabs(gx) < GYRO_NOISE_THRESHOLD) gx = 0.0f;
+    if (fabs(gy) < GYRO_NOISE_THRESHOLD) gy = 0.0f;
+    if (fabs(gz) < GYRO_NOISE_THRESHOLD) gz = 0.0f;
 
     gx *= gyroScale;
     gy *= gyroScale;
     gz *= gyroScale;
 
-    roll += gx * dt2;
-    pitch += gy * dt2;
-    yaw += gz * dt2;
+    roll += gx * dt;
+    pitch += gy * dt;
+    yaw += gz * dt;
 
     float accel_pitch = atan2f(ay, sqrtf(ax * ax + az * az)) * 180.0f / M_PI;
     float accel_roll  = atan2f(-ax, az) * 180.0f / M_PI;
