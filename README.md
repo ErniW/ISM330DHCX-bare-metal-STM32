@@ -1,7 +1,14 @@
 ## ISM330DHCX
 **Example usage of ISM330DHCX sensor and some of its internal features.**
 
-**It's an unfinished code, it's more an old experiment I decided to publish.**
+**It was my experiment with some concepts, never intended to publish. Later I decided to finish it. I mostly code bare-metal stuff in C but here for reasons I don't remember is C++.**
+
+### Some features:
+- Quaternion based computation to avoid gimbal lock, values are later converted to euler angles for readability.
+- Interrupt-driven measurment of gyroscope data for proper integration.
+- Separate timer to count delta_t. (Fixed delta_t that matches gyro frequency seems to not work properly).
+- Proper interrupt-driven I2C library with error detection, retries and validation.
+- Tap detection and pedometer.
 
 *Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
 
