@@ -4,6 +4,7 @@
 #include "ism330.h"
 #include "uart.h"
 #include "systick.h"
+#include "timer.h"
 
 #include <memory>
 #include <cstdio>
@@ -101,17 +102,8 @@ int main(){
     ISM330.gyroInterruptEnable();
 
     while(1){
+
         if(isGyroDataReady){
-
-            // int16_t gx,gy,gz;
-            // ISM330.readGyro(gx,gy,gz);
-
-            // printf("%d, %d, %d\n", gx,gy,gz);
-
-            // int16_t ax,ay,az;
-            // ISM330.readAccel(ax,ay,az);
-            // printf("%d, %d, %d\n", ax,ay,az);
-            
             ISM330.getIMU(roll,pitch,yaw);
             printf("%.2f, %.2f, %.2f\n", roll,pitch,yaw);
 

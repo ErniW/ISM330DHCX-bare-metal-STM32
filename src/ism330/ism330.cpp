@@ -1,5 +1,6 @@
 #include "ism330.h"
 #include "systick.h"
+#include "timer.h"
 
 ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c) {};
 
@@ -14,6 +15,9 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
     accelSensitivity = getAccelSensitivity(accelRange);
     gyroSensitivity = getGyroSensitivity(gyroDPS);
+
+    timerInit();
+    timerEnable();
 }
 
 void ISM330DHCX::gyroInterruptEnable()
@@ -109,22 +113,31 @@ float ISM330DHCX::getDt(uint8_t frequency){
     }
 }
 
-// #define ACCELEROMETER_GAIN          0.98f
-// #define GYROSCOPE_GAIN              0.02f
-// #define SAMPLE_RATE                 100
-
 #define IMU_ALPHA 0.98
 #define GYRO_NOISE_THRESHOLD 10
 
-float lastTime = 0;
+uint32_t lastTime = 0;
 
 void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
+    uint32_t currentTime = timerGetTime();
+
     float gyroScale = gyroSensitivity * 0.001f;
     float accelScale = accelSensitivity * 0.00980665f;
+    
+    // uint32_t currentTime = getMillis();
+    // float dt = (currentTime - lastTime) / 1000.0f;
+    // lastTime = currentTime;
 
-    float currentTime = getMillis();
-    float dt = (currentTime - lastTime) / 1000.0f; // convert to seconds
+    uint32_t delta = 0;
+
+    if(currentTime >= lastTime)
+        delta = currentTime - lastTime;
+    else
+        delta = (0xFFFFFFFF - lastTime + 1) + currentTime;
+
+    float dt = delta / 1000000.0f;
+    
     lastTime = currentTime;
 
     int16_t ax_raw, ay_raw, az_raw;

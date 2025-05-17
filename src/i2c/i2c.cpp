@@ -3,10 +3,7 @@
 //#define I2C_100KHZ 80
 // #define SD_MODE_MAX_RISE_TIME 17
 
-#define SYS_CLK 16000000
-#define PCLK1   SYS_CLK
-#define I2C_FREQ 400000
-#define I2C_FAST_MODE_MAX_RISE_TIME 300
+
 
 
 I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
@@ -22,6 +19,8 @@ void I2C::init(){
     _i2c->TRISE = (I2C_FAST_MODE_MAX_RISE_TIME * (PCLK1 / 1000000))/1000 + 1;
     
     _i2c->CR1 |= I2C_CR1_PE;
+
+
 }
 
 void I2C::write(uint8_t address, uint8_t reg, uint8_t data){

@@ -1,5 +1,7 @@
 add_library(ISM330lib OBJECT 
     ism330.cpp
+    quaternions.cpp
+    timer.cpp
 )
 
 target_include_directories(ISM330lib PUBLIC 
