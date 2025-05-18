@@ -1,7 +1,7 @@
 ## ISM330DHCX
 **Example usage of ISM330DHCX sensor and some of its internal features.**
 
-**It was my experiment with some concepts, never intended to publish. Later I decided to finish it. I mostly code bare-metal stuff in C but here for reasons I don't remember is C++.**
+*It was my experiment with some concepts, never intended to publish. Later I decided to finish it. I mostly code bare-metal stuff in C but here for reasons I don't remember is C++.*
 
 ### Some features:
 - Quaternion based computation to avoid gimbal lock, values are later converted to euler angles for readability.
@@ -9,6 +9,9 @@
 - Separate timer to count delta_t. (Fixed delta_t that matches gyro frequency seems to not work properly).
 - Proper interrupt-driven I2C library with error detection, retries and validation.
 - Tap detection and pedometer.
+
+### Possible improvements:
+- I think my read->update->verify mechanism can be done differently. Manually setting clear mask manually is annoying.
 
 *Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
 

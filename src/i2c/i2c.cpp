@@ -1,11 +1,5 @@
 #include "i2c.h"
 
-//#define I2C_100KHZ 80
-// #define SD_MODE_MAX_RISE_TIME 17
-
-
-
-
 I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
 
 void I2C::init(){
@@ -23,27 +17,108 @@ void I2C::init(){
 
 }
 
+//dodać update mask
 void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
-    volatile int tmp;
+    uint8_t retries = I2C_RETRIES;
 
-    while(_i2c->SR2 & I2C_SR2_BUSY);
+    //read register value, store it to verify later
+    //current_value = read()
+
+    //update the value with data
+    uint8_t updatedData = data;
+
+    while(retries--){
+        //try writing the updated data
+        if(tryWrite(address, reg, updatedData))
+            break;
+
+        //to wewnątrz breaka by wiedzieć czy działą
+        //read()
+        //verify
+        //if(current_value == new value)
+        //  return;
+
+    }
+    
+    //if we went this far, restart the i2c by bit banging SDA 9 times
+    //faultHandler();
+}
+
+bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
+    uint16_t timeout = I2C_TIMEOUT_VAL;
+
+    while(_i2c->SR2 & I2C_SR2_BUSY){
+        if(checkErrors(--timeout))
+            return false;
+    };
     _i2c->CR1 |= I2C_CR1_START;
 
-    while(!(_i2c->SR1 & I2C_SR1_SB));
+    timeout = I2C_TIMEOUT_VAL;
+    while(!(_i2c->SR1 & I2C_SR1_SB)){
+        if(checkErrors(--timeout))
+            return false;
+    };
     _i2c->DR = address << 1;
 
-    while(!(_i2c->SR1 & I2C_SR1_ADDR));
-    tmp = _i2c->SR2;
+    timeout = I2C_TIMEOUT_VAL;
+    while(!(_i2c->SR1 & I2C_SR1_ADDR)){
+        if(checkErrors(--timeout))
+            return false;
+    };
+    (void)_i2c->SR2;
 
-    while(!(_i2c->SR1 & I2C_SR1_TXE));
+    timeout = I2C_TIMEOUT_VAL;
+    while(!(_i2c->SR1 & I2C_SR1_TXE)){
+        if(checkErrors(--timeout))
+            return false;
+    };
     _i2c->DR = reg;
 
-    while(!(_i2c->SR1 & I2C_SR1_TXE));
+    timeout = I2C_TIMEOUT_VAL;
+    while(!(_i2c->SR1 & I2C_SR1_TXE)){
+        if(checkErrors(--timeout))
+            return false;
+    };
     _i2c->DR = data;
 
-    while(!(_i2c->SR1 & I2C_SR1_BTF));
+    timeout = I2C_TIMEOUT_VAL;
+    while(!(_i2c->SR1 & I2C_SR1_BTF)){
+        if(checkErrors(--timeout))
+            return false;
+    };
     _i2c->CR1 |= I2C_CR1_STOP;
+
+    return true;
+}
+
+uint8_t I2C::checkErrors(uint16_t timeout) {
+
+    if(!timeout){
+        return I2C_ERROR_TIMEOUT;
+    }
+    else if (_i2c->SR1 & I2C_SR1_BERR) {
+        _i2c->SR1 &= ~I2C_SR1_BERR;
+        return I2C_ERROR_BERR; 
+    }
+    else if (_i2c->SR1 & I2C_SR1_ARLO) {
+        _i2c->SR1 &= ~I2C_SR1_ARLO;
+        return I2C_ERROR_ARLO; 
+    }
+    else if (_i2c->SR1 & I2C_SR1_AF) {
+        _i2c->SR1 &= ~I2C_SR1_AF;
+        return I2C_ERROR_AF;
+    }
+    else if (_i2c->SR1 & I2C_SR1_OVR) {
+        _i2c->SR1 &= ~I2C_SR1_OVR;
+        return I2C_ERROR_OVR;
+    }
+    else if (_i2c->SR1 & I2C_SR1_TIMEOUT) {
+        _i2c->SR1 &= ~I2C_SR1_TIMEOUT;
+        return I2C_ERROR_TIMEOUT;
+    }
+
+    return I2C_OK;
 }
 
 void I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
