@@ -24,7 +24,7 @@ public:
     I2C(I2C_TypeDef* i2c);
     void init();
     void write(uint8_t address, uint8_t reg, uint8_t data);
-    void read(uint8_t address, uint8_t reg, uint8_t* buffer, int n);
+    bool read(uint8_t address, uint8_t reg, uint8_t* buffer, int n);
 private:
     bool tryWrite(uint8_t address, uint8_t reg, uint8_t data);
     uint8_t checkErrors(uint16_t timeout);
