@@ -22,23 +22,25 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
     uint8_t retries = I2C_RETRIES;
 
-    //read register value, store it to verify later
-    //current_value = read()
-
-    //update the value with data
-    uint8_t updatedData = data;
 
     while(retries--){
+
+        //read register value, store it to verify later
+        uint8_t currentData = 0;
+        read(address, reg, &currentData, 1);
+
+        //update the value with data
+        uint8_t updatedData = data | currentData;
+
         //try writing the updated data
         if(tryWrite(address, reg, updatedData))
-            break;
+        {
+            uint8_t verifyData = 0;
+            read(address, reg, &verifyData, 1);
 
-        //to wewnątrz breaka by wiedzieć czy działą
-        //read()
-        //verify
-        //if(current_value == new value)
-        //  return;
-
+            if(verifyData == updatedData)
+                return;
+        }
     }
     
     //if we went this far, restart the i2c by bit banging SDA 9 times
