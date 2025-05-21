@@ -13,15 +13,12 @@ void I2C::init(){
     _i2c->TRISE = (I2C_FAST_MODE_MAX_RISE_TIME * (PCLK1 / 1000000))/1000 + 1;
     
     _i2c->CR1 |= I2C_CR1_PE;
-
-
 }
 
 //dodać update mask
 void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
     uint8_t retries = I2C_RETRIES;
-
 
     while(retries--){
 
@@ -45,50 +42,58 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
     
     //if we went this far, restart the i2c by bit banging SDA 9 times
     //faultHandler();
-}
+};
 
-bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
+bool I2C::waitForFlag(volatile uint32_t statusReg, uint8_t flag){
     uint16_t timeout = I2C_TIMEOUT_VAL;
 
-    while(_i2c->SR2 & I2C_SR2_BUSY){
+    while(statusReg & flag){
         if(checkErrors(--timeout))
             return false;
     };
+
+    return true;
+};
+
+bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
+
+    // if(!waitForFlag(_i2c->SR2, I2C_SR2_BUSY)) 
+    //     return false;
+
+    uint16_t timeout = I2C_TIMEOUT_VAL;
+
+    // while(_i2c->SR2 & I2C_SR2_BUSY){
+    //     if(checkErrors(--timeout))
+    //         return false;
+    // };
+
+    while(_i2c->SR2 & I2C_SR2_BUSY);
+
     _i2c->CR1 |= I2C_CR1_START;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_SB)){
-        if(checkErrors(--timeout))
-            return false;
-    };
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) 
+        return false;
+
     _i2c->DR = address << 1;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_ADDR)){
-        if(checkErrors(--timeout))
-            return false;
-    };
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) 
+        return false;
+
     (void)_i2c->SR2;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) 
+        return false;
+
     _i2c->DR = reg;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) 
+        return false;
+
     _i2c->DR = data;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_BTF)){
-        if(checkErrors(--timeout))
-            return false;
-    };
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_BTF)) 
+        return false;
+
     _i2c->CR1 |= I2C_CR1_STOP;
 
     return true;
@@ -123,48 +128,75 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
     return I2C_OK;
 }
 
-void I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
+bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t length){
     
-    volatile int tmp;
+    // if(!waitForFlag(_i2c->SR2, I2C_SR2_BUSY)) 
+    //     return false;
 
+    // _i2c->CR1 |= I2C_CR1_START;
+
+    uint16_t timeout = I2C_TIMEOUT_VAL;
+
+    // while((_i2c->SR2 & I2C_SR2_BUSY)){
+    //     if(checkErrors(--timeout))
+    //         return false;
+    // };
     while(_i2c->SR2 & I2C_SR2_BUSY);
+
     _i2c->CR1 |= I2C_CR1_START;
 
-    while(!(_i2c->SR1 & I2C_SR1_SB));
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) 
+        return false;
+
     _i2c->DR = address << 1;
 
-    while(!(_i2c->SR1 & I2C_SR1_ADDR));
-    tmp = _i2c->SR2;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) 
+        return false;
 
-    while(!(_i2c->SR1 & I2C_SR1_TXE));
+    (void)_i2c->SR2;
+
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) 
+        return false;
+
     _i2c->DR = reg;
 
-    while(!(_i2c->SR1 & I2C_SR1_TXE));
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) 
+        return false;
+
     _i2c->CR1 |= I2C_CR1_START;
 
-    while(!(_i2c->SR1 & I2C_SR1_SB));
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) 
+        return false;
+
     _i2c->DR = address << 1 | 1;
 
-    while(!(_i2c->SR1 & I2C_SR1_ADDR));
-    tmp = _i2c->SR2;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) 
+        return false;
+
+    (void)_i2c->SR2;
 
     _i2c->CR1 |= I2C_CR1_ACK;
 
-    while(n >0){
-        if(n == 1){
+    while(length >0){
+        if(length == 1){
             _i2c->CR1 &=~ I2C_CR1_ACK;
             _i2c->CR1 |= I2C_CR1_STOP;
 
-            while (!(_i2c->SR1 & I2C_SR1_RXNE));
+            if(!waitForFlag(_i2c->SR1, I2C_SR1_RXNE)) 
+                return false;
+
             *buffer++ = _i2c->DR;
 
             break;
         }
         else{
+            if(!waitForFlag(_i2c->SR1, I2C_SR1_RXNE)) 
+                return false;
 
-            while (!(_i2c->SR1 & I2C_SR1_RXNE));
             *buffer++ = _i2c->DR;
-            n--;
+            length--;
         }
     }    
+
+    return true;
 }

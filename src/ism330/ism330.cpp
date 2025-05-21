@@ -6,7 +6,7 @@ ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c)
 
 void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, uint8_t gyroDPS){
 
-    _i2c->write(_address, CTRL3_C, SW_RESET);
+    // _i2c->write(_address, CTRL3_C, SW_RESET);
     delay_ms(100);
     // _i2c->write(_address, CTRL3_C, AUTO_INC);
 

@@ -11,7 +11,7 @@
 - Tap detection and pedometer.
 
 ### Possible improvements:
-- I think my read->update->verify mechanism can be done differently. Manually setting clear mask manually is annoying.
+- I think my read->update->verify mechanism can be done differently. Manually setting bit clear mask is annoying. Technically I could store all values in memory and manipulate bits from there.
 
 *Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
 
