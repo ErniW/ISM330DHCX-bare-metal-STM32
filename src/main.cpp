@@ -10,15 +10,6 @@
 #include <cstdio>
 #include <string.h>
 
-#define PB8_AF_MODE (1 << 17)
-#define PB9_AF_MODE (1 << 19)
-
-#define PB8_AF4_I2C_SCL (1 << 2)
-#define PB9_AF4_I2C_SDA (1 << 6)
-
-#define PB8_PULLUP (1 << 16)
-#define PB9_PULLUP (1 << 18)
-
 #define PA5_OUTPUT  (1 << 10)
 #define LED_PIN     (1 << 5)
 
@@ -38,10 +29,7 @@ int main(){
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
-    GPIOB->MODER |= PB8_AF_MODE | PB9_AF_MODE;
-    GPIOB->OTYPER |= GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9;
-    GPIOB->PUPDR |= PB8_PULLUP | PB9_PULLUP;
-    GPIOB->AFR[1] |= PB8_AF4_I2C_SCL | PB9_AF4_I2C_SDA;
+    I2C1_gpioConfig();
 
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
     GPIOA->MODER |= PA5_OUTPUT;

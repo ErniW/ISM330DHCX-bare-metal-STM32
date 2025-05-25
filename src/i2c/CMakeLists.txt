@@ -1,5 +1,6 @@
 add_library(I2Clib OBJECT 
     i2c.cpp
+    i2c_utils.cpp
 )
 
 target_include_directories(I2Clib PUBLIC 
