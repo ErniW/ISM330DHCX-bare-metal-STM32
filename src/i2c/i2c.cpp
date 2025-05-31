@@ -56,10 +56,10 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
     //faultHandler();
 }
 
-bool I2C::waitForFlag(uint32_t reg, uint32_t flag){
+bool I2C::waitForFlag(volatile uint32_t& reg, uint32_t flag){
     uint16_t timeout = I2C_TIMEOUT_VAL;
 
-    while(reg & flag){
+    while(!(reg & flag)){
         if(checkErrors(--timeout))
             return false;
     };
@@ -75,47 +75,21 @@ bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
             return false;
     };
 
-    // if(!waitForFlag(_i2c->SR2, I2C_SR2_BUSY)) return false;
     _i2c->CR1 |= I2C_CR1_START;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_SB)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-    // if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) return false;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_ADDR)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-    // if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-    // if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
     _i2c->DR = reg;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-    // if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
     _i2c->DR = data;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_BTF)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-    // if(!waitForFlag(_i2c->SR1, I2C_SR1_BTF)) return false;
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_BTF)) return false;
     _i2c->CR1 |= I2C_CR1_STOP;
 
     return true;
@@ -126,10 +100,7 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
     uint8_t state = I2C_OK;
     
     if(!timeout){
-        // I2C1_manualRestart();
-        // init();
         state = I2C_ERROR_TIMEOUT;
-        // return state;
     }
     else if (_i2c->SR1 & I2C_SR1_BERR) {
         _i2c->SR1 &= ~I2C_SR1_BERR;
@@ -151,21 +122,6 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
         _i2c->SR1 &= ~I2C_SR1_TIMEOUT;
         state = I2C_ERROR_TIMEOUT;
     }
-
-    // //to poprawić
-    // if(state){
-    //     _i2c->CR1 |= I2C_CR1_STOP;
-
-    //     error_count++;
-    //     if(error_count == I2C_RETRIES){
-    //         I2C1_manualRestart();
-    //         init();
-    //     }
-    //     return state;
-    // }
-    
-    // //to zawsze czyści z odliczaniem, nie chcę tego w ten sposób
-    // error_count = 0;
 
     if(state)
         _i2c->CR1 |= I2C_CR1_STOP;
@@ -208,66 +164,28 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
 
     _i2c->CR1 |= I2C_CR1_START;
 
-    // while(!(_i2c->SR1 & I2C_SR1_SB));
-
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_SB)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1;
 
-    // while(!(_i2c->SR1 & I2C_SR1_ADDR));
-
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_ADDR)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
     _i2c->DR = reg;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_TXE)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_TXE)) return false;
     _i2c->CR1 |= I2C_CR1_START;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_SB)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1 | 1;
 
-    timeout = I2C_TIMEOUT_VAL;
-    while(!(_i2c->SR1 & I2C_SR1_ADDR)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
+    if(!waitForFlag(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
 
     _i2c->CR1 |= I2C_CR1_ACK;
 
     while (n > 0) {
-        timeout = I2C_TIMEOUT_VAL;
-        while (!(_i2c->SR1 & I2C_SR1_RXNE)) {
-            if (checkErrors(--timeout))
-                return false;
-        }
+        if(!waitForFlag(_i2c->SR1, I2C_SR1_RXNE)) return false;
 
         if (n == 1) {
             _i2c->CR1 &= ~I2C_CR1_ACK;

@@ -29,7 +29,7 @@ public:
 private:
     bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, int n);
     bool tryWrite(uint8_t address, uint8_t reg, uint8_t data);
-    bool waitForFlag(uint32_t reg, uint32_t flag);
+    bool waitForFlag(volatile uint32_t& reg, uint32_t flag);
     uint8_t checkErrors(uint16_t timeout);
     I2C_TypeDef* _i2c;
     uint8_t _state;
