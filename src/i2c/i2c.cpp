@@ -27,7 +27,7 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
         //read register value, store it to verify later
         uint8_t currentData = 0;
-        if(!read(address, reg, &currentData, 1))
+        if(!tryRead(address, reg, &currentData, 1))
             continue;
 
         //update the value with data
@@ -38,13 +38,16 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
             continue;
         
         uint8_t verifyData = 0;
-        if(!read(address, reg, &verifyData, 1))
+        if(!tryRead(address, reg, &verifyData, 1))
             continue;
 
         if(verifyData == updatedData)
             return;
 
-        //zrobic dzialanie
+        if(retries == 1){
+            I2C1_manualRestart();
+            init();
+        }
     }
     
     
@@ -118,8 +121,6 @@ bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
     return true;
 }
 
-uint8_t error_count = 0;
-
 uint8_t I2C::checkErrors(uint16_t timeout) {
    
     uint8_t state = I2C_OK;
@@ -165,10 +166,34 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
     
     // //to zawsze czyści z odliczaniem, nie chcę tego w ten sposób
     // error_count = 0;
+
+    if(state)
+        _i2c->CR1 |= I2C_CR1_STOP;
+
     return state;
 }
 
 bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
+
+    static uint8_t error_counter = 0;
+
+    if(!tryRead(address, reg, buffer, n)){
+        error_counter++;
+
+        if(error_counter == 3){
+            I2C1_manualRestart();
+            init();
+            error_counter = 0;
+        }
+
+        return false;
+    }
+
+    error_counter = 0;
+    return true;
+}
+
+bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, int n){
     uint16_t timeout = I2C_TIMEOUT_VAL;
 
     while(_i2c->SR2 & I2C_SR2_BUSY){
