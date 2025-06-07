@@ -46,6 +46,7 @@ add_subdirectory(STM32F446RE)
 add_subdirectory(src/uart)
 add_subdirectory(src/i2c)
 add_subdirectory(src/ism330)
+add_subdirectory(src/ism330/Fusion)
 add_subdirectory(src/systick)
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
@@ -55,6 +56,7 @@ target_link_libraries(${PROJECT_NAME}.elf PRIVATE
     ISM330lib
     UARTlib
     systicklib
+    FUSIONlib
 )
 
 # Compile the bin file to upload.

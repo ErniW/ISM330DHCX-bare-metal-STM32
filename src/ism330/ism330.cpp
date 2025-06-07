@@ -2,8 +2,10 @@
 #include "systick.h"
 #include "timer.h"
 #include "quaternions.h"
+#include "Fusion/Fusion.h"
 
-ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {};
+ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {
+};
 
 void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, uint8_t gyroDPS){
 
@@ -16,9 +18,11 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
 
     accelSensitivity = getAccelSensitivity(accelRange);
     gyroSensitivity = getGyroSensitivity(gyroDPS);
-
+    
     timerInit();
     timerEnable();
+
+    FusionAhrsInitialise(&ahrs);
 }
 
 void ISM330DHCX::gyroInterruptEnable()
@@ -130,7 +134,7 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     uint32_t currentTime = timerGetTime();
 
     float gyroScale = gyroSensitivity * 0.001f;
-    float accelScale = accelSensitivity * 0.00980665f;
+    float accelScale = accelSensitivity;
     
     // uint32_t currentTime = getMillis();
     // float dt = (currentTime - lastTime) / 1000.0f;
@@ -169,98 +173,16 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     gy *= gyroScale;
     gz *= gyroScale;
 
-    gx *= DEG2RAD;
-    gy *= DEG2RAD;
-    gz *= DEG2RAD;
+    FusionVector gyroscope = {gx, gy, gz};
+    FusionVector accelerometer = {ax, ay, az};
 
-    float omega = sqrtf(gx*gx + gy*gy + gz*gz);
-    if (omega > 0.0f) {
-        float theta = omega * dt;
-        float half_theta = 0.5f * theta;
-        float sin_half_theta = sinf(half_theta);
-        float ux = gx / omega;
-        float uy = gy / omega;
-        float uz = gz / omega;
+    FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
+    FusionQuaternion q = FusionAhrsGetQuaternion(&ahrs);
 
-        Quaternion dq(0,0,0,0);
-        dq.w = cosf(half_theta);
-        dq.x = ux * sin_half_theta;
-        dq.y = uy * sin_half_theta;
-        dq.z = uz * sin_half_theta;
-
-        quaternion.multiply(dq);
-        quaternion.normalize();
-    }
-
-    
-
-    Quaternion accel(1,0,0,0);
-
-    // Normalize accelerometer measurement
-    float norm = sqrtf(ax*ax + ay*ay + az*az);
-    if (norm > 1e-6f) { // avoid div by zero
-        ax /= norm; 
-        ay /= norm; 
-        az /= norm;
-
-        // Reference gravity vector (down)
-        // const float refx = 0.0f;
-        // const float refy = 0.0f;
-        // const float refz = -1.0f;
-
-        // Current gravity vector from quaternion (rotate vector [0,0,-1] by quaternion)
-        float gx_ref = 2.0f * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
-        float gy_ref = 2.0f * (quaternion.w * quaternion.x + quaternion.y * quaternion.z);
-        float gz_ref = quaternion.w * quaternion.w - quaternion.x * quaternion.x - quaternion.y * quaternion.y + quaternion.z * quaternion.z;
-
-        // Compute rotation axis (cross product between measured and expected gravity)
-        
-
-        // Compute angle between measured and expected gravity
-        float dot = ax * gx_ref + ay * gy_ref + az * gz_ref;
-
-        if(dot > 1.0f) dot = 1.0f;
-        if(dot < -1.0f) dot = -1.0f;
-
-        float angle = acosf(dot);
-
-        if(angle < 1e-6f)
-            return;
-
-        float vx = ay * gz_ref - az * gy_ref;
-        float vy = az * gx_ref - ax * gz_ref;
-        float vz = ax * gy_ref - ay * gx_ref;
-
-        // Build correction quaternion representing this rotation
-        float s = sinf(angle / 2.0f);
-        Quaternion correction(cosf(angle / 2.0f), vx * s, vy * s, vz * s);
-        correction.normalize();
-         correction.ensurePositiveW();
-
- // Blend small correction into orientation quaternion
-    // float correction_strength = 0.02f;  // tune this (small value)
-    // quaternion.slerp(correction, correction_strength);
-    // quaternion.ensurePositiveW();
-    // quaternion.normalize();
-
-        // Blend small correction into orientation quaternion
-        float correction_strength = 0.02f;  // tune this (small value)
-        
-            // Quaternion identity(1, 0, 0, 0);
-        Quaternion blend = Quaternion(1,0,0,0);
-        blend.slerp(correction, correction_strength);
-
-        blend.multiply(quaternion);  // blend = blend * quaternion
-        quaternion = blend;
-        quaternion.ensurePositiveW();
-        quaternion.normalize(); 
-        
-    }
-
-    
-
-    
-    // quaternion.slerp(accel, 0.02f);
+    quaternion.w = q.element.w;
+    quaternion.x = q.element.x;
+    quaternion.y = q.element.y;
+    quaternion.z = q.element.z;
 };
 
 
