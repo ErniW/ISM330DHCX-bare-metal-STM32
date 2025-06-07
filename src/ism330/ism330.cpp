@@ -1,6 +1,7 @@
 #include "ism330.h"
 #include "systick.h"
 #include "timer.h"
+#include "quaternions.h"
 
 ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c) {};
 
