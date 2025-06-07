@@ -89,12 +89,20 @@ int main(){
 
     ISM330.gyroInterruptEnable();
 
+
+    uint8_t cnt = 0;
+
     while(1){
 
         if(isGyroDataReady){
             ISM330.getIMU(roll,pitch,yaw);
-            printf("%.2f, %.2f, %.2f\n", roll,pitch,yaw);
+            // printf("%.2f, %.2f, %.2f\n", roll,pitch,yaw);
 
+            if(cnt % 20 == 0)
+                printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.w, ISM330.quaternion.x, ISM330.quaternion.y, ISM330.quaternion.z);
+
+            cnt++;
+            
             isGyroDataReady = false;
             GPIOA->ODR ^= LED_PIN;
         }

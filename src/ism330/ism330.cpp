@@ -3,7 +3,7 @@
 #include "timer.h"
 #include "quaternions.h"
 
-ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c) {};
+ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {};
 
 void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, uint8_t gyroDPS){
 
@@ -119,6 +119,8 @@ float ISM330DHCX::getDt(uint8_t frequency){
 
 uint32_t lastTime = 0;
 
+#define DEG2RAD (3.14159265359f / 180.0f)
+
 void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
     uint32_t currentTime = timerGetTime();
@@ -163,18 +165,73 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     gy *= gyroScale;
     gz *= gyroScale;
 
-    roll += gx * dt;
-    pitch += gy * dt;
-    yaw += gz * dt;
+    gx *= DEG2RAD;
+    gy *= DEG2RAD;
+    gz *= DEG2RAD;
 
-    float accel_pitch = atan2f(ay, sqrtf(ax * ax + az * az)) * 180.0f / M_PI;
-    float accel_roll  = atan2f(-ax, az) * 180.0f / M_PI;
+    float omega = sqrtf(gx*gx + gy*gy + gz*gz);
+    if (omega > 0.0f) {
+        float theta = omega * dt;
+        float half_theta = 0.5f * theta;
+        float sin_half_theta = sinf(half_theta);
+        float ux = gx / omega;
+        float uy = gy / omega;
+        float uz = gz / omega;
 
-    pitch = IMU_ALPHA * pitch + (1.0f - IMU_ALPHA) * accel_pitch;
-    roll  = IMU_ALPHA * roll  + (1.0f - IMU_ALPHA) * accel_roll;
+        Quaternion dq(0,0,0,0);
+        dq.w = cosf(half_theta);
+        dq.x = ux * sin_half_theta;
+        dq.y = uy * sin_half_theta;
+        dq.z = uz * sin_half_theta;
 
-    if (yaw > 180.0f) yaw -= 360.0f;
-    if (yaw < -180.0f) yaw += 360.0f;
+        quaternion.multiply(dq);
+        quaternion.normalize();
+    }
+
+    
+
+    Quaternion accel(1,0,0,0);
+
+    float norm = sqrtf(ax*ax + ay*ay + az*az);
+    if(norm > 0.0f){
+        ax /= norm; 
+        ay /= norm; 
+        az /= norm;
+
+        float refx = 0.0f;
+        float refy = 0.0f;
+        float refz = -1.0f;
+
+        float vx = ay * refz - az * refy;
+        float vy = az * refx - ax * refz;
+        float vz = ax * refy - ay * refx;
+
+        float dot = ax * refx + ay * refy + az * refz;
+        float angle = acosf(dot);
+
+        float s = sinf(angle / 2.0f);
+
+        accel.w = cosf(angle / 2.0f);
+        accel.x = vx * s;
+        accel.y = vy * s;
+        accel.z = vz * s;
+        accel.normalize();
+
+        Quaternion correction = Quaternion(quaternion.w, -quaternion.x, -quaternion.y, -quaternion.z);
+        correction.multiply(accel);
+        correction.normalize();
+
+        Quaternion blend(1, 0, 0, 0);
+        blend.slerp(correction, 0.02f);
+
+        quaternion.multiply(blend);
+        quaternion.normalize();
+    }
+
+    
+
+    
+    // quaternion.slerp(accel, 0.02f);
 }
 
 

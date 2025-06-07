@@ -29,6 +29,51 @@ void Quaternion::normalize(){
     z /= norm;
 }
 
+void Quaternion::inverse(){
+    x = -x;
+    y = -y;
+    z = -z;
+}
+
+#define DOT_THRESHOLD 0.995f
+
+void Quaternion::slerp(Quaternion &q, float weight){
+    float dot = w*q.w + x*q.x + y*q.y + z*q.z;
+
+    if(dot < 0.0f){
+        q.w = -q.w;
+        q.x = -q.x;
+        q.y = -q.y;
+        q.z = -q.z;
+        dot = -dot;
+    }
+
+    if(dot > DOT_THRESHOLD){
+        w += weight * (q.w - w);
+        x += weight * (q.x - x);
+        y += weight * (q.y - y);
+        z += weight * (q.z - z);
+
+        normalize();
+        return;
+    }
+
+    float theta_0 = acosf(dot);
+    float theta = theta_0 * weight;
+    float sin_theta = sinf(theta);
+    float sin_theta_0 = sinf(theta_0);
+
+    float s0 = cosf(theta) - dot * sin_theta / sin_theta_0;
+    float s1 = sin_theta / sin_theta_0;
+
+    w = w*s0 + q.w*s1;
+    x = x*s0 + q.x*s1;
+    y = y*s0 + q.y*s1;
+    z = z*s0 + q.z*s1;
+
+    normalize();
+}
+
 Euler Quaternion::toEuler(){
     Euler result = {0};
 

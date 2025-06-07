@@ -12,7 +12,9 @@ public:
     void multiply(const Quaternion &q);
     void normalize();
     Euler toEuler();
-     float w, x, y, z;
+    void slerp(Quaternion &q, float weight);
+    void inverse();
+    float w, x, y, z;
 private:
    
 };

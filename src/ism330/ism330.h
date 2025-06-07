@@ -5,6 +5,7 @@
 #include <memory>
 #include <cstdio>
 #include <math.h>
+#include "quaternions.h"
 
 #define ADDRESS     0x6A
 
@@ -138,6 +139,8 @@ public:
     float gyroCalibrationX;
     float gyroCalibrationY;
     float gyroCalibrationZ;
+
+    Quaternion quaternion;
 private:
     float gyroSensitivity;
     float accelSensitivity;
