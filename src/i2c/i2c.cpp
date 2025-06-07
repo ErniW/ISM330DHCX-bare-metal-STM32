@@ -1,4 +1,6 @@
 #include "i2c.h"
+#include <string.h>
+#include <cstdio>
 
 I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
 
@@ -148,6 +150,7 @@ bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
             error_counter = 0;
         }
 
+        printf("Error\n");
         return false;
     }
 

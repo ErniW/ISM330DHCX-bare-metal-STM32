@@ -222,6 +222,9 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
         float angle = acosf(dot);
 
+        if(angle < 1e-6f)
+            return;
+
         // Build correction quaternion representing this rotation
         float s = sinf(angle / 2.0f);
         Quaternion correction(cosf(angle / 2.0f), vx * s, vy * s, vz * s);
@@ -237,14 +240,15 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
         // Blend small correction into orientation quaternion
         float correction_strength = 0.02f;  // tune this (small value)
         
-            Quaternion identity(1, 0, 0, 0);
-        Quaternion blend = identity;
+            // Quaternion identity(1, 0, 0, 0);
+        Quaternion blend = Quaternion(1,0,0,0);
         blend.slerp(correction, correction_strength);
 
         blend.multiply(quaternion);  // blend = blend * quaternion
         quaternion = blend;
-        quaternion.normalize(); 
         quaternion.ensurePositiveW();
+        quaternion.normalize(); 
+        
     }
 
     
