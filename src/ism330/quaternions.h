@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct{
     float roll;
     float pitch;
@@ -10,6 +12,7 @@ public:
     void multiply(const Quaternion &q);
     void normalize();
     Euler toEuler();
+     float w, x, y, z;
 private:
-    float w, x, y, z;
+   
 };

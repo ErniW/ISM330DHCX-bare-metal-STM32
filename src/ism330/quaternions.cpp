@@ -9,10 +9,16 @@ Quaternion::Quaternion(float w, float x, float y, float z){
 }
 
 void Quaternion::multiply(const Quaternion &q){
-    w = w*q.w - x*q.x - y*q.y- z*q.z;
-    x = w*q.x + x*q.w + y*q.z - z*q.y;
-    y = w*q.y - x*q.z + y*q.w + z*q.x;
-    z = w*q.z + x*q.y - y*q.x + z*q.w;
+
+    float w2 = w*q.w - x*q.x - y*q.y - z*q.z;
+    float x2 = w*q.x + x*q.w + y*q.z - z*q.y;
+    float y2 = w*q.y - x*q.z + y*q.w + z*q.x;
+    float z2 = w*q.z + x*q.y - y*q.x + z*q.w;
+
+    w = w2;
+    x = x2;
+    y = y2;
+    z = z2;
 }
 
 void Quaternion::normalize(){
