@@ -121,8 +121,8 @@ class ISM330DHCX {
 public:
     ISM330DHCX(uint8_t address, I2C* i2c);
     void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
-    void readGyro(int16_t& x, int16_t& y, int16_t& z);
-    void readAccel(int16_t& x, int16_t& y, int16_t& z);
+    bool readGyro(int16_t& x, int16_t& y, int16_t& z);
+    bool readAccel(int16_t& x, int16_t& y, int16_t& z);
     float getAccelSensitivity(uint8_t accel_range);
     float getGyroSensitivity(uint8_t gyro_range);
 

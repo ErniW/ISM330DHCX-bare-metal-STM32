@@ -28,27 +28,31 @@ void ISM330DHCX::gyroInterruptEnable()
  
 }
 
-void ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
+bool ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
 
-    uint8_t buffer[6];
+    uint8_t buffer[6] = {0};
 
     _i2c->read(_address, READ_ACCEL, buffer, 6);
 
     x = (buffer[1] << 8 | buffer[0]);
     y = (buffer[3] << 8 | buffer[2]);
     z = (buffer[5] << 8 | buffer[4]);
+
+    return true;
 }
 
 
-void ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
+bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
 
-    uint8_t buffer[6];
+    uint8_t buffer[6] = {0};
 
     _i2c->read(_address, READ_GYRO, buffer, 6);
 
     x = (buffer[1] << 8 | buffer[0]);
     y = (buffer[3] << 8 | buffer[2]);
     z = (buffer[5] << 8 | buffer[4]);
+
+    return true;
 }
 
 float ISM330DHCX::getAccelSensitivity(uint8_t range){
@@ -146,8 +150,8 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     int16_t ax_raw, ay_raw, az_raw;
     int16_t gx_raw, gy_raw, gz_raw;
 
-    readAccel(ax_raw, ay_raw, az_raw);
-    readGyro(gx_raw, gy_raw, gz_raw);
+    if(!readAccel(ax_raw, ay_raw, az_raw)) return;
+    if(!readGyro(gx_raw, gy_raw, gz_raw)) return;
 
     float ax = ax_raw * accelScale;
     float ay = ay_raw * accelScale;
@@ -200,22 +204,20 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
         az /= norm;
 
         // Reference gravity vector (down)
-        const float refx = 0.0f;
-        const float refy = 0.0f;
-        const float refz = -1.0f;
+        // const float refx = 0.0f;
+        // const float refy = 0.0f;
+        // const float refz = -1.0f;
 
         // Current gravity vector from quaternion (rotate vector [0,0,-1] by quaternion)
-        float gx = 2.0f * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
-        float gy = 2.0f * (quaternion.w * quaternion.x + quaternion.y * quaternion.z);
-        float gz = quaternion.w * quaternion.w - quaternion.x * quaternion.x - quaternion.y * quaternion.y + quaternion.z * quaternion.z;
+        float gx_ref = 2.0f * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
+        float gy_ref = 2.0f * (quaternion.w * quaternion.x + quaternion.y * quaternion.z);
+        float gz_ref = quaternion.w * quaternion.w - quaternion.x * quaternion.x - quaternion.y * quaternion.y + quaternion.z * quaternion.z;
 
         // Compute rotation axis (cross product between measured and expected gravity)
-        float vx = ay * gz - az * gy;
-        float vy = az * gx - ax * gz;
-        float vz = ax * gy - ay * gx;
+        
 
         // Compute angle between measured and expected gravity
-        float dot = ax * gx + ay * gy + az * gz;
+        float dot = ax * gx_ref + ay * gy_ref + az * gz_ref;
 
         if(dot > 1.0f) dot = 1.0f;
         if(dot < -1.0f) dot = -1.0f;
@@ -224,6 +226,10 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
         if(angle < 1e-6f)
             return;
+
+        float vx = ay * gz_ref - az * gy_ref;
+        float vy = az * gx_ref - ax * gz_ref;
+        float vz = ax * gy_ref - ay * gx_ref;
 
         // Build correction quaternion representing this rotation
         float s = sinf(angle / 2.0f);
