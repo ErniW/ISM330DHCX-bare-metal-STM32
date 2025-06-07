@@ -192,47 +192,66 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
     Quaternion accel(1,0,0,0);
 
+    // Normalize accelerometer measurement
     float norm = sqrtf(ax*ax + ay*ay + az*az);
-    if(norm > 0.0f){
+    if (norm > 1e-6f) { // avoid div by zero
         ax /= norm; 
         ay /= norm; 
         az /= norm;
 
-        float refx = 0.0f;
-        float refy = 0.0f;
-        float refz = -1.0f;
+        // Reference gravity vector (down)
+        const float refx = 0.0f;
+        const float refy = 0.0f;
+        const float refz = -1.0f;
 
-        float vx = ay * refz - az * refy;
-        float vy = az * refx - ax * refz;
-        float vz = ax * refy - ay * refx;
+        // Current gravity vector from quaternion (rotate vector [0,0,-1] by quaternion)
+        float gx = 2.0f * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
+        float gy = 2.0f * (quaternion.w * quaternion.x + quaternion.y * quaternion.z);
+        float gz = quaternion.w * quaternion.w - quaternion.x * quaternion.x - quaternion.y * quaternion.y + quaternion.z * quaternion.z;
 
-        float dot = ax * refx + ay * refy + az * refz;
+        // Compute rotation axis (cross product between measured and expected gravity)
+        float vx = ay * gz - az * gy;
+        float vy = az * gx - ax * gz;
+        float vz = ax * gy - ay * gx;
+
+        // Compute angle between measured and expected gravity
+        float dot = ax * gx + ay * gy + az * gz;
+
+        if(dot > 1.0f) dot = 1.0f;
+        if(dot < -1.0f) dot = -1.0f;
+
         float angle = acosf(dot);
 
+        // Build correction quaternion representing this rotation
         float s = sinf(angle / 2.0f);
-
-        accel.w = cosf(angle / 2.0f);
-        accel.x = vx * s;
-        accel.y = vy * s;
-        accel.z = vz * s;
-        accel.normalize();
-
-        Quaternion correction = Quaternion(quaternion.w, -quaternion.x, -quaternion.y, -quaternion.z);
-        correction.multiply(accel);
+        Quaternion correction(cosf(angle / 2.0f), vx * s, vy * s, vz * s);
         correction.normalize();
+         correction.ensurePositiveW();
 
-        Quaternion blend(1, 0, 0, 0);
-        blend.slerp(correction, 0.02f);
+ // Blend small correction into orientation quaternion
+    // float correction_strength = 0.02f;  // tune this (small value)
+    // quaternion.slerp(correction, correction_strength);
+    // quaternion.ensurePositiveW();
+    // quaternion.normalize();
 
-        quaternion.multiply(blend);
-        quaternion.normalize();
+        // Blend small correction into orientation quaternion
+        float correction_strength = 0.02f;  // tune this (small value)
+        
+            Quaternion identity(1, 0, 0, 0);
+        Quaternion blend = identity;
+        blend.slerp(correction, correction_strength);
+
+        blend.multiply(quaternion);  // blend = blend * quaternion
+        quaternion = blend;
+        quaternion.normalize(); 
+        quaternion.ensurePositiveW();
     }
 
     
 
     
     // quaternion.slerp(accel, 0.02f);
-}
+};
 
 
 

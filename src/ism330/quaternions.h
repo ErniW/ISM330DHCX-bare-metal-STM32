@@ -14,6 +14,7 @@ public:
     Euler toEuler();
     void slerp(Quaternion &q, float weight);
     void inverse();
+    void ensurePositiveW();
     float w, x, y, z;
 private:
    

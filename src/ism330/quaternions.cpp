@@ -19,20 +19,34 @@ void Quaternion::multiply(const Quaternion &q){
     x = x2;
     y = y2;
     z = z2;
+
+    normalize();
+    ensurePositiveW();
 }
 
 void Quaternion::normalize(){
     float norm = sqrtf(w*w + x*x + y*y + z*z);
-    w /= norm;
-    x /= norm;
-    y /= norm;
-    z /= norm;
+    if(norm >  1e-6f){
+        w /= norm;
+        x /= norm;
+        y /= norm;
+        z /= norm;
+    }
 }
 
 void Quaternion::inverse(){
     x = -x;
     y = -y;
     z = -z;
+}
+
+void Quaternion::ensurePositiveW() {
+    if (w < 0.0f) {
+        w = -w;
+        x = -x;
+        y = -y;
+        z = -z;
+    }
 }
 
 #define DOT_THRESHOLD 0.995f
@@ -55,6 +69,7 @@ void Quaternion::slerp(Quaternion &q, float weight){
         z += weight * (q.z - z);
 
         normalize();
+        ensurePositiveW();
         return;
     }
 
@@ -72,6 +87,7 @@ void Quaternion::slerp(Quaternion &q, float weight){
     z = z*s0 + q.z*s1;
 
     normalize();
+    ensurePositiveW();
 }
 
 Euler Quaternion::toEuler(){
