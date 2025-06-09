@@ -4,8 +4,18 @@
 #include "quaternions.h"
 #include "Fusion/Fusion.h"
 
-ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {
-};
+// ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {
+
+// };
+
+ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : 
+    _address(address),
+    _i2c(i2c),
+    quaternion(1,0,0,0),
+    accelFilterX(0.0f, 1.0f, 0.001f, 0.1f),
+    accelFilterY(0.0f, 1.0f, 0.001f, 0.1f),
+    accelFilterZ(0.0f, 1.0f, 0.001f, 0.1f)
+{}
 
 void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, uint8_t gyroDPS){
 
@@ -23,6 +33,7 @@ void ISM330DHCX::init(uint8_t accelFreq, uint8_t accelRange, uint8_t gyroFreq, u
     timerEnable();
 
     FusionAhrsInitialise(&ahrs);
+    FusionOffsetInitialise(&offset, 416);
 }
 
 void ISM330DHCX::gyroInterruptEnable()
@@ -161,6 +172,10 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     float ay = ay_raw * accelScale;
     float az = az_raw * accelScale;
 
+    ax = accelFilterX.update(ax);
+    ay = accelFilterY.update(ay);
+    az = accelFilterZ.update(az);
+
     float gx = (float)gx_raw - gyroCalibrationX;
     float gy = (float)gy_raw - gyroCalibrationY;
     float gz = (float)gz_raw - gyroCalibrationZ;
@@ -175,7 +190,7 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
 
     FusionVector gyroscope = {gx, gy, gz};
     FusionVector accelerometer = {ax, ay, az};
-
+    gyroscope = FusionOffsetUpdate(&offset, gyroscope);
     FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
     FusionQuaternion q = FusionAhrsGetQuaternion(&ahrs);
 

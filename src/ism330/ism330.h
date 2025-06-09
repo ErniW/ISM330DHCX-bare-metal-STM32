@@ -7,6 +7,7 @@
 #include <math.h>
 #include "quaternions.h"
 #include "Fusion/Fusion.h"
+#include "kalman.h"
 
 #define ADDRESS     0x6A
 
@@ -141,10 +142,14 @@ public:
     float gyroCalibrationY;
     float gyroCalibrationZ;
     FusionAhrs ahrs;
+    FusionOffset offset;
     Quaternion quaternion;
 private:
     float gyroSensitivity;
     float accelSensitivity;
+    KalmanFilter1D accelFilterX;
+    KalmanFilter1D accelFilterY;
+    KalmanFilter1D accelFilterZ;
     uint8_t _address;
     I2C* _i2c;
 };
