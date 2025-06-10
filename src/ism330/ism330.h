@@ -5,7 +5,6 @@
 #include <memory>
 #include <cstdio>
 #include <math.h>
-#include "quaternions.h"
 #include "Fusion/Fusion.h"
 #include "kalman.h"
 

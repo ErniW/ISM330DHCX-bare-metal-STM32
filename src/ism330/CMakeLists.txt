@@ -1,6 +1,5 @@
 add_library(ISM330lib OBJECT 
     ism330.cpp
-    quaternions.cpp
     timer.cpp
     kalman.cpp
 )
