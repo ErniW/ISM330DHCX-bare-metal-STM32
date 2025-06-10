@@ -8,19 +8,34 @@ void I2C::init(){
     _i2c->CR1 &=~ I2C_CR1_PE;
     _i2c->CR1 |= I2C_CR1_SWRST;
     _i2c->CR1 &=~ I2C_CR1_SWRST;
-    while (_i2c->SR2 & I2C_SR2_BUSY);
-
+     if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) NVIC_SystemReset();
     _i2c->CR2 |= (PCLK1 / 1000000);
     _i2c->CCR = PCLK1 / (3 * I2C_FREQ) | I2C_CCR_FS;
     _i2c->TRISE = (I2C_FAST_MODE_MAX_RISE_TIME * (PCLK1 / 1000000))/1000 + 1;
     
     _i2c->CR1 |= I2C_CR1_PE;
-
-
 }
 
-//dodać update mask
-void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
+/*
+    I2C DATA WRITE PROCEDURE
+    -------------------------------------
+    1. Read the target register
+    2. Locally update the data
+    3. Update the register
+    4. Read again to verify.
+
+    There are I2C_WRITE_RETRIES retries, before last attempt
+    the I2C bus is restarted and then we have a final attempt.
+
+    If you whish you can include faultHandler.
+
+    Further alternative would be storing every register locally
+    to avoid initial reading and improve behavior where we
+    had an error but the register become altered so we can't
+    recover its previous state.
+*/
+
+bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
     uint8_t retries = I2C_WRITE_RETRIES;
 
@@ -42,41 +57,20 @@ void I2C::write(uint8_t address, uint8_t reg, uint8_t data){
         if(!tryRead(address, reg, &verifyData, 1))
             continue;
 
+        //Check if data is updated correctly
         if(verifyData == updatedData)
-            return;
+            return true;
 
+        //Restart I2C bus before last attempt
         if(retries == 1){
             I2C1_manualRestart();
             init();
         }
     }
     
-    
-
     //if we went this far, restart the i2c by bit banging SDA 9 times
     //faultHandler();
-}
-
-bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){
-    uint16_t timeout = I2C_TIMEOUT_VAL;
-
-    while(!(reg & flag)){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
-    return true;
-}
-
-bool I2C::waitForFlagClear(volatile uint32_t& reg, uint32_t flag){
-    uint16_t timeout = I2C_TIMEOUT_VAL;
-
-    while(reg & flag){
-        if(checkErrors(--timeout))
-            return false;
-    };
-
-    return true;
+    return false;
 }
 
 bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
@@ -102,40 +96,24 @@ bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
     return true;
 }
 
-uint8_t I2C::checkErrors(uint16_t timeout) {
-    
-    if(!timeout){
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_TIMEOUT;
-    }
-    else if (_i2c->SR1 & I2C_SR1_BERR) {
-        _i2c->SR1 &= ~I2C_SR1_BERR;
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_BERR; 
-    }
-    else if (_i2c->SR1 & I2C_SR1_ARLO) {
-        _i2c->SR1 &= ~I2C_SR1_ARLO;
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_ARLO; 
-    }
-    else if (_i2c->SR1 & I2C_SR1_AF) {
-        _i2c->SR1 &= ~I2C_SR1_AF;
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_AF;
-    }
-    else if (_i2c->SR1 & I2C_SR1_OVR) {
-        _i2c->SR1 &= ~I2C_SR1_OVR;
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_OVR;
-    }
-    else if (_i2c->SR1 & I2C_SR1_TIMEOUT) {
-        _i2c->SR1 &= ~I2C_SR1_TIMEOUT;
-        _i2c->CR1 |= I2C_CR1_STOP;
-        return I2C_ERROR_TIMEOUT;
-    }
+/*
+    I2C DATA READ PROCEDURE
+    -------------------------------------
 
-    return I2C_OK;
-}
+    In this case, because we are streaming the data we 
+    are counting number of retries on the fly where
+    incoming data is signaled by interrupt. (we don't
+    retry immediately, only when new data is available)
+
+    After 5 retries we restart I2C bus. Such errors can happen
+    if we move IMU device in our hands when it's connected
+    via a breadboard with loose cables. 
+
+    PS. I've been testing the restart procedure, it 
+    usually do the job but if I2C device hangs, only thing
+    we can do is resetting whole system. (It can be further
+    handled but I don't see a reason to do so here)
+*/
 
 bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
@@ -196,4 +174,61 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     }
 
     return true;
+}
+
+bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){
+    uint16_t timeout = I2C_TIMEOUT_VAL;
+
+    while(!(reg & flag)){
+        if(checkErrors(--timeout))
+            return false;
+    };
+
+    return true;
+}
+
+bool I2C::waitForFlagClear(volatile uint32_t& reg, uint32_t flag){
+    uint16_t timeout = I2C_TIMEOUT_VAL;
+
+    while(reg & flag){
+        if(checkErrors(--timeout))
+            return false;
+    };
+
+    return true;
+}
+
+uint8_t I2C::checkErrors(uint16_t timeout) {
+    
+    if(!timeout){
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_TIMEOUT;
+    }
+    else if(_i2c->SR1 & I2C_SR1_BERR){
+        _i2c->SR1 &= ~I2C_SR1_BERR;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_BERR; 
+    }
+    else if(_i2c->SR1 & I2C_SR1_ARLO){
+        _i2c->SR1 &= ~I2C_SR1_ARLO;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_ARLO; 
+    }
+    else if(_i2c->SR1 & I2C_SR1_AF){
+        _i2c->SR1 &= ~I2C_SR1_AF;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_AF;
+    }
+    else if(_i2c->SR1 & I2C_SR1_OVR){
+        _i2c->SR1 &= ~I2C_SR1_OVR;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_OVR;
+    }
+    else if(_i2c->SR1 & I2C_SR1_TIMEOUT){
+        _i2c->SR1 &= ~I2C_SR1_TIMEOUT;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        return I2C_ERROR_TIMEOUT;
+    }
+
+    return I2C_OK;
 }

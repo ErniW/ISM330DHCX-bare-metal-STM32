@@ -22,8 +22,6 @@ ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
 extern "C" void __disable_irq(void);
 extern "C" void __enable_irq(void);
 
-volatile bool isGyroDataReady = false;
-
 int main(){
 
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
@@ -56,36 +54,13 @@ int main(){
         GYRO_1000_DPS
     );
 
-    
-
-    uint16_t steps_counter = 0;
-
+    // uint16_t steps_counter = 0;
     // ISM330.enablePedometer();
+
     // ISM330.enableSingleTap();
 
-    uint32_t previous_time = 0;
-
-    float roll =0;
-    float pitch = 0;
-    float yaw = 0;
-
-    float avgX = 0; 
-    float avgY = 0;
-    float avgZ = 0;
-
     delay_ms(100);
-    for(uint8_t i=0; i<100; i++){
-        int16_t gx,gy,gz = 0;
-        ISM330.readGyro(gx,gy,gz);
-        avgX += (float)gx;
-        avgY += (float)gy;
-        avgZ += (float)gz;
-        delay_ms(10);
-    }
-
-    ISM330.gyroCalibrationX = avgX / 100.0;
-    ISM330.gyroCalibrationY = avgY / 100.0;
-    ISM330.gyroCalibrationZ = avgZ / 100.0;
+    ISM330.calibrateGyro(100);
 
     ISM330.gyroInterruptEnable();
 
@@ -94,16 +69,17 @@ int main(){
 
     while(1){
 
-        if(isGyroDataReady){
-            ISM330.getIMU(roll,pitch,yaw);
-            // printf("%.2f, %.2f, %.2f\n", roll,pitch,yaw);
+        if(ISM330.isGyroDataReady){
+            ISM330.getIMU();
 
+            //count reduces print amount to protect 3D viewer from hanging.
             if(cnt % 20 == 0)
-                printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.w, ISM330.quaternion.x, ISM330.quaternion.y, ISM330.quaternion.z);
+                //compatible with https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
+                printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
 
             cnt++;
             
-            isGyroDataReady = false;
+            ISM330.isGyroDataReady = false;
             GPIOA->ODR ^= LED_PIN;
         }
 
@@ -161,7 +137,7 @@ extern "C" void EXTI15_10_IRQHandler(void);
 
 void EXTI15_10_IRQHandler(void){
     if(EXTI->PR & INT1_PIN){
-        isGyroDataReady = true;
+        ISM330.isGyroDataReady = true;
         EXTI->PR |= INT1_PIN;
     }
 }

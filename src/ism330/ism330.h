@@ -9,23 +9,20 @@
 #include "Fusion/Fusion.h"
 #include "kalman.h"
 
+#define GYRO_NOISE_THRESHOLD 10
+
 #define ADDRESS     0x6A
 
-#define FUNC_CFG_ACCESS 0x01
-#define EMB_FUNC_EN_A   0x04
-
+#define FUNC_CFG_ACCESS     0x01
+#define EMB_FUNC_EN_A       0x04
 #define COUNTER_BDR_REG1    0x0B
 #define INT1_CTRL           0x0D
-
 #define CTRL1_XL    0x10
 #define CTRL2_G     0x11
 #define CTRL3_C     0x12
-
 #define TAP_SRC     0x1C
-
 #define READ_GYRO   0x22
 #define READ_ACCEL  0x28
-
 #define TAP_CFG0    0x56
 #define TAP_CFG1    0x57
 #define TAP_CFG2    0x58
@@ -106,15 +103,15 @@ enum accelRange{
 #define GYRO_SENSITIVITY_125    4.375
 #define GYRO_SENSITIVITY_250    8.75
 #define GYRO_SENSITIVITY_500    17.50
-#define GYRO_SENSITIVITY_1000    35.0
-#define GYRO_SENSITIVITY_2000    70.0
-#define GYRO_SENSITIVITY_4000    140.0
+#define GYRO_SENSITIVITY_1000   35.0
+#define GYRO_SENSITIVITY_2000   70.0
+#define GYRO_SENSITIVITY_4000   140.0
 
 enum gyroDPS{
     GYRO_4000_DPS = 1,
-    GYRO_125_DPS = 2,
-    GYRO_250_DPS = 0,
-    GYRO_500_DPS = (1 << 2),
+    GYRO_125_DPS =  2,
+    GYRO_250_DPS =  0,
+    GYRO_500_DPS =  (1 << 2),
     GYRO_1000_DPS = (2 << 2),
     GYRO_2000_DPS = (3 << 2),
 };
@@ -125,31 +122,30 @@ public:
     void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
     bool readGyro(int16_t& x, int16_t& y, int16_t& z);
     bool readAccel(int16_t& x, int16_t& y, int16_t& z);
-    float getAccelSensitivity(uint8_t accel_range);
-    float getGyroSensitivity(uint8_t gyro_range);
-
-    void getIMU(float& roll, float& pitch, float& yaw);
-
+    void getIMU();
+    void calibrateGyro(uint16_t samples);
     void enablePedometer();
-    uint16_t readPedometer();
-
-    void enableSingleTap();
     uint8_t readSingleTap();
-
+    uint16_t readPedometer();
+    void enableSingleTap();
     void gyroInterruptEnable();
-    float getDt(uint8_t frequency);
-    float gyroCalibrationX;
-    float gyroCalibrationY;
-    float gyroCalibrationZ;
-    FusionAhrs ahrs;
-    FusionOffset offset;
-    Quaternion quaternion;
+    volatile bool isGyroDataReady;
+    FusionQuaternion quaternion;
 private:
     float gyroSensitivity;
     float accelSensitivity;
+    float gyroCalibrationX;
+    float gyroCalibrationY;
+    float gyroCalibrationZ;
+    uint32_t lastTime;
+    FusionAhrs ahrs;
+    FusionOffset offset;
     KalmanFilter1D accelFilterX;
     KalmanFilter1D accelFilterY;
     KalmanFilter1D accelFilterZ;
     uint8_t _address;
     I2C* _i2c;
+    float getDt(uint8_t frequency);
+    float getAccelSensitivity(uint8_t accel_range);
+    float getGyroSensitivity(uint8_t gyro_range);
 };

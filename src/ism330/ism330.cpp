@@ -4,14 +4,9 @@
 #include "quaternions.h"
 #include "Fusion/Fusion.h"
 
-// ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : _address(address), _i2c(i2c), quaternion(1,0,0,0) {
-
-// };
-
 ISM330DHCX::ISM330DHCX(uint8_t address, I2C* i2c) : 
     _address(address),
     _i2c(i2c),
-    quaternion(1,0,0,0),
     accelFilterX(0.0f, 1.0f, 0.001f, 0.1f),
     accelFilterY(0.0f, 1.0f, 0.001f, 0.1f),
     accelFilterZ(0.0f, 1.0f, 0.001f, 0.1f)
@@ -68,6 +63,25 @@ bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
     z = (buffer[5] << 8 | buffer[4]);
 
     return true;
+}
+
+void ISM330DHCX::calibrateGyro(uint16_t samples){
+    float avgX = 0; 
+    float avgY = 0;
+    float avgZ = 0;
+
+    for(uint16_t i=0; i<samples; i++){
+        int16_t gx,gy,gz = 0;
+        readGyro(gx,gy,gz);
+        avgX += (float)gx;
+        avgY += (float)gy;
+        avgZ += (float)gz;
+        delay_ms(10);
+    }
+
+    gyroCalibrationX = avgX / samples;
+    gyroCalibrationY = avgY / samples;
+    gyroCalibrationZ = avgZ / samples;
 }
 
 float ISM330DHCX::getAccelSensitivity(uint8_t range){
@@ -133,24 +147,22 @@ float ISM330DHCX::getDt(uint8_t frequency){
     }
 }
 
-#define IMU_ALPHA 0.98
-#define GYRO_NOISE_THRESHOLD 10
+/*
+    GET IMU ORIENTATION
+    -------------------------------------
 
-uint32_t lastTime = 0;
-
-#define DEG2RAD (3.14159265359f / 180.0f)
-
-void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
-
+    - Fusion library (formerly called Madgwick).
+    - Custom timer dedicated to get delta time.
+    - 1D kalman filter on accelerometer data.
+    - Drop invalid data and noise below threshold.
+    - Quaternion based.
+*/
+void ISM330DHCX::getIMU() {
     uint32_t currentTime = timerGetTime();
 
     float gyroScale = gyroSensitivity * 0.001f;
     float accelScale = accelSensitivity;
     
-    // uint32_t currentTime = getMillis();
-    // float dt = (currentTime - lastTime) / 1000.0f;
-    // lastTime = currentTime;
-
     uint32_t delta = 0;
 
     if(currentTime >= lastTime)
@@ -192,12 +204,7 @@ void ISM330DHCX::getIMU(float& roll, float& pitch, float& yaw) {
     FusionVector accelerometer = {ax, ay, az};
     gyroscope = FusionOffsetUpdate(&offset, gyroscope);
     FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
-    FusionQuaternion q = FusionAhrsGetQuaternion(&ahrs);
-
-    quaternion.w = q.element.w;
-    quaternion.x = q.element.x;
-    quaternion.y = q.element.y;
-    quaternion.z = q.element.z;
+    quaternion = FusionAhrsGetQuaternion(&ahrs);
 };
 
 
