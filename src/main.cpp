@@ -21,8 +21,10 @@ ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
 
 extern "C" void __disable_irq(void);
 extern "C" void __enable_irq(void);
+extern "C" void __enable_fault_irq(void);
 
 int main(){
+    SCB->CPACR |= (0xF << 20);
 
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
@@ -72,7 +74,7 @@ int main(){
         if(ISM330.isGyroDataReady){
             ISM330.getIMU();
 
-            //count reduces print amount to protect 3D viewer from hanging.
+            //count reduces print amount to protect 3D viewer from hanging. (it eventually hangs but a bit later)
             if(cnt % 20 == 0)
                 //compatible with https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
                 printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);

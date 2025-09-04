@@ -63,3 +63,8 @@ target_link_libraries(${PROJECT_NAME}.elf PRIVATE
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PROJECT_NAME}.bin
 )
+
+add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
+    COMMAND ${CMAKE_OBJDUMP} -d -S $<TARGET_FILE:${PROJECT_NAME}.elf> > ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PROJECT_NAME}.lst
+    COMMENT "Generating disassembly .lst file"
+)

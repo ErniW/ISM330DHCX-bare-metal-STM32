@@ -68,7 +68,7 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
         }
     }
     
-    //if we went this far, restart the i2c by bit banging SDA 9 times
+    //if we went this far, do a hardfault if necessary
     //faultHandler();
     return false;
 }

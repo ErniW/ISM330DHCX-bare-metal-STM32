@@ -12,13 +12,21 @@
 #define I2C_READ_RETRIES 5
 #define I2C_TIMEOUT_VAL 20000
 
-enum {
+enum{
     I2C_OK,
     I2C_ERROR_TIMEOUT,
     I2C_ERROR_BERR,
     I2C_ERROR_ARLO,
     I2C_ERROR_AF,
     I2C_ERROR_OVR,
+};
+
+enum I2Cstate{
+    I2C_STATE_IDLE,
+    I2C_STATE_START,
+    I2C_STATE_ADDRESS,
+    I2C_STATE_TX,
+    I2C_STATE_STOP
 };
 
 class I2C {
