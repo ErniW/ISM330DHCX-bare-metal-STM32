@@ -49,12 +49,12 @@ int main(){
     SysTick_Init();
 
     i2c.init();
-    // ISM330.init(
-    //     FREQ_416_HZ,
-    //     ACCEL_2G,
-    //     FREQ_416_HZ,
-    //     GYRO_1000_DPS
-    // );
+    ISM330.init(
+        FREQ_416_HZ,
+        ACCEL_2G,
+        FREQ_416_HZ,
+        GYRO_1000_DPS
+    );
 
     // uint16_t steps_counter = 0;
     // ISM330.enablePedometer();
@@ -64,30 +64,34 @@ int main(){
     // delay_ms(100);
     // ISM330.calibrateGyro(100);
 
-    // ISM330.gyroInterruptEnable();
+    ISM330.gyroInterruptEnable();
 
 
     // uint8_t cnt = 0;
 
     while(1){
-        uint8_t whoami = 0;
-        i2c.tryRead(0x6A, 0x0F, &whoami, 1); 
-        printf("Val: %x\n", whoami);
-        delay_ms(100);
+        // uint8_t whoami = 0;
+        // i2c.tryRead(0x6A, 0x0F, &whoami, 1); 
+        // printf("Val: %x\n", whoami);
+        // delay_ms(100);
         // if(ISM330.isGyroDataReady){
         //     ISM330.getIMU();
 
-        //     //count reduces print amount to protect 3D viewer from hanging. (it eventually hangs but a bit later)
-        //     if(cnt % 20 == 0)
-        //         //compatible with https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
+        //     // //count reduces print amount to protect 3D viewer from hanging. (it eventually hangs but a bit later)
+        //     // if(cnt % 20 == 0)
+        //     //     //compatible with https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
         //         printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
 
-        //     cnt++;
+        //     // cnt++;
             
         //     ISM330.isGyroDataReady = false;
         //     GPIOA->ODR ^= LED_PIN;
         // }
-
+        int16_t x = 0;
+        int16_t y = 0;
+        int16_t z = 0;
+        ISM330.readAccel(x,y,z);
+        // printf("%d, %d, %d\n", x, y, z);
         /*
             TAP EVENT DETECTION
 

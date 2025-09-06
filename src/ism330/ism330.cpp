@@ -42,10 +42,12 @@ bool ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
     uint8_t buffer[6] = {0};
 
     _i2c->read(_address, READ_ACCEL, buffer, 6);
-
+    while(_i2c->_state != I2C_STATE_IDLE);
     x = (buffer[1] << 8 | buffer[0]);
     y = (buffer[3] << 8 | buffer[2]);
     z = (buffer[5] << 8 | buffer[4]);
+
+    printf("%d, %d, %d\n", x, y, z);
 
     return true;
 }

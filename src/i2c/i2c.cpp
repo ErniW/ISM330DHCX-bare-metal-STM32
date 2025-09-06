@@ -56,7 +56,7 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
         //read register value, store it to verify later
         uint8_t currentData = 0;
-        if(!tryRead(address, reg, &currentData, 1))
+        if(!tryRead(address, reg, &currentData, 1,false))
             continue;
 
         //update the value with data
@@ -67,7 +67,7 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
             continue;
         
         uint8_t verifyData = 0;
-        if(!tryRead(address, reg, &verifyData, 1))
+        if(!tryRead(address, reg, &verifyData, 1, false))
             continue;
 
         //Check if data is updated correctly
@@ -128,41 +128,58 @@ bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
     handled but I don't see a reason to do so here)
 */
 
+// bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
+
+//     static uint8_t error_counter = 0;
+
+//     if(!tryRead(address, reg, buffer, n, false)){
+//         error_counter++;
+
+//         if(error_counter == I2C_READ_RETRIES){
+//             I2C1_manualRestart();
+//             init();
+//             error_counter = 0;
+//         }
+
+//         printf("Error\n");
+//         return false;
+//     }
+
+//     error_counter = 0;
+//     return true;
+// }
+
 bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
-    static uint8_t error_counter = 0;
+    if(_packet.error_counter == I2C_READ_RETRIES){
+        I2C1_manualRestart();
+        init();
+        _packet.error_counter = 0;
+    }
 
-    if(!tryRead(address, reg, buffer, n)){
-        error_counter++;
+    if(!tryRead(address, reg, buffer, n, true)){
+        _packet.error_counter++;
 
-        if(error_counter == I2C_READ_RETRIES){
+        if(_packet.error_counter == I2C_READ_RETRIES){
             I2C1_manualRestart();
             init();
-            error_counter = 0;
+            _packet.error_counter = 0;
         }
 
         printf("Error\n");
         return false;
     }
 
-    error_counter = 0;
     return true;
 }
 
-bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
+bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n, bool async){
 
-    // while(_state == I2C_STATE_BUSY);
+    // while(_state != I2C_STATE_IDLE);
+    // _state = I2C_STATE_BUSY;
 
-    _state = I2C_STATE_BUSY;
-   
     if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
-    // (void)_i2c->SR1;
-    // (void)_i2c->SR2;
-     _i2c->CR1 &= ~I2C_CR1_STOP;
     _i2c->CR1 |= I2C_CR1_START;
-
-    
-  
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1;
@@ -170,57 +187,112 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
 
-    
-
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
     _i2c->DR = reg;
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    
     _i2c->CR1 |= I2C_CR1_START;
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1 | 1;
-//     volatile uint32_t tmp;
-//     tmp = _i2c->SR1;
-//     tmp = _i2c->SR2;
-//     (void)tmp;
-//     _i2c->CR2 &= ~I2C_CR2_ITBUFEN; // disable temporarily
-// _i2c->DR = (address << 1) | 1; // write read address
-// _i2c->CR2 |= I2C_CR2_ITBUFEN; 
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
 
-    // volatile uint32_t t = _i2c->DR;
-    _i2c->CR1 |= I2C_CR1_ACK;
+    if(async){
+        _packet.addr = address;
+        _packet.reg = reg;
+        _packet.index = 0;
+        // _packet.error_counter = 0;
+        _packet.read_buffer_ptr = buffer;
+        _packet.length = n;
+        beginAsyncRead();
+        
+        return true;
+    }
 
-    
-//    if ((SR1_tmp & I2C_SR1_BTF) && (_packet.index < _packet.length - 1)) {
-//         _packet.read_buffer_ptr[_packet.index++] = _i2c->DR;
-//     }
-
-    // printf("%x %x\n", SR1_tmp, SR2_tmp);
-
-    _packet.addr = address;
-    _packet.reg = reg;
-    _packet.index = 0;
-    _packet.error_counter = 0;
-    _packet.read_buffer_ptr = buffer;
-    _packet.length = n;
-
-     _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
-
-    if(n > 1){
-        _i2c->CR1 |= I2C_CR1_ACK;
-    } 
-    else{
+    if (n == 1) {
         _i2c->CR1 &= ~I2C_CR1_ACK;
         _i2c->CR1 |= I2C_CR1_STOP;
+
+        (void)_i2c->SR2;
+        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+        *buffer = _i2c->DR;
+        return true;
     }
-// if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
+
+    _i2c->CR1 |= I2C_CR1_ACK;
+    (void)_i2c->SR2;
+
+    while (n > 0) {
+        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+
+        if (n == 2) {
+            // Prepare NACK + STOP before reading N-1
+            _i2c->CR1 &= ~I2C_CR1_ACK;
+            _i2c->CR1 |= I2C_CR1_STOP;
+        }
+
+        *buffer++ = _i2c->DR;
+        n--;
+    }
+
+    // _state = I2C_STATE_IDLE;
+    return true;
+    // while(_state != I2C_STATE_IDLE);
+
+    // _state = I2C_STATE_BUSY;
    
-    // _i2c->CR2  |=I2C_CR2_ITEVTEN;   
+    // if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
+    //  _i2c->CR1 &= ~I2C_CR1_STOP;
+    // _i2c->CR1 |= I2C_CR1_START;
+
+    
+  
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
+    // _i2c->DR = address << 1;
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    // (void)_i2c->SR2;
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    // _i2c->DR = reg;
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    
+    // _i2c->CR1 |= I2C_CR1_START;
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
+    // _i2c->DR = address << 1 | 1;
+
+    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    // (void)_i2c->SR2;
+
+    // if(async){
+    //     _packet.addr = address;
+    //     _packet.reg = reg;
+    //     _packet.index = 0;
+    //     _packet.error_counter = 0;
+    //     _packet.read_buffer_ptr = buffer;
+    //     _packet.length = n;
+
+    //     _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
+
+    //     if(n > 1){
+    //         _i2c->CR1 |= I2C_CR1_ACK;
+    //     } 
+    //     else{
+    //         _i2c->CR1 &= ~I2C_CR1_ACK;
+    //         _i2c->CR1 |= I2C_CR1_STOP;
+    //     }
+
+    //      while(_state != I2C_STATE_IDLE);
+    //     return true;
+    // }
+  
+    // // if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;  
+    // _i2c->CR1 |= I2C_CR1_ACK;
 
     // while (n > 0) {
     //     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
@@ -233,9 +305,21 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     //     *buffer++ = _i2c->DR;
     //     n--;
     // }
-      while(_state != I2C_STATE_DONE);
-        
-    return true;
+     
+    // _state = I2C_STATE_IDLE;
+    // return true;
+}
+
+void I2C::beginAsyncRead(){
+    _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
+
+    if(_packet.length > 1){
+        _i2c->CR1 |= I2C_CR1_ACK;
+    } 
+    else{
+        _i2c->CR1 &= ~I2C_CR1_ACK;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
 }
 
  void I2C::IRQhandler(){
@@ -262,41 +346,10 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
         if (_packet.index >= _packet.length) {
              // STOP here
               _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
-            _state = I2C_STATE_DONE;
+            _state = I2C_STATE_IDLE;
             // volatile uint32_t t = _i2c->DR;
         }
     }
-//     if (SR1_tmp & I2C_SR1_SB) {
-//     // Send slave address (write for reg, read for data)
-//     _i2c->DR = (_packet.addr << 1) | 1;
-// }
-
-// if(SR1_tmp & I2C_SR1_ADDR){
-//         (void)_i2c->SR1;
-//         (void)_i2c->SR2;
-// }
-
-    // if ((SR1_tmp & I2C_SR1_RXNE)) {
-    //     _packet.read_buffer_ptr[_packet.index++] = _i2c->DR;
-
-    //     if (_packet.index == _packet.length - 1) {
-    //         _i2c->CR1 &= ~I2C_CR1_ACK;
-    //     }
-
-    //     if (_packet.index >= _packet.length) {
-    //         _i2c->CR1 |= I2C_CR1_STOP;
-
-    //         // _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITERREN | I2C_CR2_ITEVTEN);
-            
-           
-    //         // _state = I2C_STATE_DONE;
-    //     }
-    // }
-
-    //  if ((_packet.index >= _packet.length) && !(_i2c->SR2 & I2C_SR2_BUSY)) {
-    //     _i2c->CR2 &= ~(I2C_CR2_ITEVTEN | I2C_CR2_ITBUFEN | I2C_CR2_ITERREN);
-    //     _state = I2C_STATE_DONE;
-    // }
  }
 
 bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){
