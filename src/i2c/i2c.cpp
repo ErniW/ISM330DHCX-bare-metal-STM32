@@ -174,6 +174,13 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
     _i2c->DR = address << 1 | 1;
+//     volatile uint32_t tmp;
+//     tmp = _i2c->SR1;
+//     tmp = _i2c->SR2;
+//     (void)tmp;
+//     _i2c->CR2 &= ~I2C_CR2_ITBUFEN; // disable temporarily
+// _i2c->DR = (address << 1) | 1; // write read address
+// _i2c->CR2 |= I2C_CR2_ITBUFEN; 
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
     (void)_i2c->SR2;
@@ -209,7 +216,7 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     //     *buffer++ = _i2c->DR;
     //     n--;
     // }
-     while(_state != I2C_STATE_DONE);
+      while(_state != I2C_STATE_DONE);
     return true;
 }
 
@@ -221,7 +228,7 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     _i2c->DR = (_packet.addr << 1) | 1;
 }
 
-if(_i2c->SR1 & I2C_SR1_ADDR){
+if(SR1_tmp & I2C_SR1_ADDR){
         (void)_i2c->SR1;
         (void)_i2c->SR2;
 }
