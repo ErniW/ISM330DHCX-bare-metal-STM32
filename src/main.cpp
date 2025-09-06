@@ -49,88 +49,15 @@ int main(){
     SysTick_Init();
 
     i2c.init();
-    ISM330.init(
-        FREQ_416_HZ,
-        ACCEL_2G,
-        FREQ_416_HZ,
-        GYRO_1000_DPS
-    );
-
-    // uint16_t steps_counter = 0;
-    // ISM330.enablePedometer();
-
-    // ISM330.enableSingleTap();
-
-    delay_ms(100);
-    ISM330.calibrateGyro(100);
-
-    ISM330.gyroInterruptEnable();
-
-
-    uint8_t cnt = 0;
 
     while(1){
+        // uint8_t whoami = 0;
+        // i2c.read(0x6A, 0x0F, &whoami, 1); 
+        // printf("Val: %x\n", whoami);
 
-        if(ISM330.isGyroDataReady){
-            ISM330.getIMU();
+        i2c.write(0x6A, CTRL1_XL, 0xF);
 
-            //count reduces print amount to protect 3D viewer from hanging. (it eventually hangs but a bit later)
-            if(cnt % 20 == 0)
-                //compatible with https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
-                printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
-
-            cnt++;
-            
-            ISM330.isGyroDataReady = false;
-            GPIOA->ODR ^= LED_PIN;
-        }
-
-        /*
-            TAP EVENT DETECTION
-
-            Please be aware that further calibration of threshold is required
-        */
-
-        // uint8_t tap_event = ISM330.readSingleTap();
-
-        // switch(tap_event){
-        //     case TAP_EVENT_X_POSITIVE:
-        //         printf("+X tap\n");
-        //         break;
-        //     case TAP_EVENT_X_NEGATIVE:
-        //         printf("-X tap\n");
-        //         break;
-        //     case TAP_EVENT_Y_POSITIVE:
-        //         printf("+Y tap\n");
-        //         break;
-        //     case TAP_EVENT_Y_NEGATIVE:
-        //         printf("-Y tap\n");
-        //         break;
-        //     case TAP_EVENT_Z_POSITIVE:
-        //         printf("+Z tap\n");
-        //         break;
-        //     case TAP_EVENT_Z_NEGATIVE:
-        //         printf("-Z tap\n");
-        //         break;
-        // }
-
-        // delay_ms(10);
-
-
-        /*
-            PEDOMETER
-
-            Please be aware that pedometer starts transmitting after few counted steps.
-        */
-
-        // uint16_t current_steps = ISM330.readPedometer();
-        
-        // if(current_steps != steps_counter){
-        //     steps_counter = current_steps;
-        //     printf("Steps: %d\n", steps_counter);
-        // }
-
-        // delay_ms(100);
+        delay_ms(100);
     }
 
 }
@@ -142,4 +69,8 @@ void EXTI15_10_IRQHandler(void){
         ISM330.isGyroDataReady = true;
         EXTI->PR |= INT1_PIN;
     }
+}
+
+extern "C" void I2C1_EV_IRQHandler(void) {
+    i2c.IRQhandler();
 }

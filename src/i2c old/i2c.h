@@ -21,32 +21,18 @@ enum{
     I2C_ERROR_OVR,
 };
 
-enum{
+enum I2Cstate{
     I2C_STATE_IDLE,
     I2C_STATE_BUSY,
-    I2C_STATE_DONE,
-};
-
-enum{
-    I2C_WRITE,
-    I2C_READ
-};
-
-enum{
-    I2C_STEP_WRITE_ADDR,
-    I2C_STEP_WRITE_REG,
-    I2C_STEP_WRITE_VAL,
-    I2C_STEP_WRITE_READ_ADDR,
-    I2C_STEP_WAIT_BTF,
+    I2C_STATE_WRITE_REG,
+    I2C_STATE_READ
 };
 
 typedef struct{
-    uint8_t operation;
-    uint8_t step;
-    uint8_t addr;
+    uint8_t write_address;
+    uint8_t read_address;
     uint8_t reg;
-    uint8_t write_value;
-    uint8_t* read_buffer_ptr;
+    uint8_t* buffer_ptr;
     uint8_t length;
     uint8_t index;
     uint8_t error_counter;
@@ -56,12 +42,15 @@ class I2C {
 public:
     I2C(I2C_TypeDef* i2c);
     void init();
-    void write(uint8_t address, uint8_t reg, uint8_t value);
-    void read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t length);
-
-    void IRQhandler();
+    bool write(uint8_t address, uint8_t reg, uint8_t data);
+    bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+    void readIRQhandler();
 private:
-
+    bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+    bool tryWrite(uint8_t address, uint8_t reg, uint8_t data);
+    bool waitForFlagSet(volatile uint32_t& reg, uint32_t flag);
+    bool waitForFlagClear(volatile uint32_t& reg, uint32_t flag);
+    uint8_t checkErrors(uint16_t timeout);
     I2C_TypeDef* _i2c;
     uint8_t _state;
     I2C_read_packet _packet;
