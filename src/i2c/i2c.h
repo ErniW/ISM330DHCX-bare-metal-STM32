@@ -21,13 +21,20 @@ enum{
     I2C_ERROR_OVR,
 };
 
-enum I2Cstate{
+enum {
     I2C_STATE_IDLE,
-    I2C_STATE_START,
-    I2C_STATE_ADDRESS,
-    I2C_STATE_TX,
-    I2C_STATE_STOP
+    I2C_STATE_BUSY,
+    I2C_STATE_DONE,
 };
+
+typedef struct{
+    uint8_t addr;
+    uint8_t reg;
+    uint8_t* read_buffer_ptr;
+    uint8_t length;
+    uint8_t index;
+    uint8_t error_counter;
+} I2C_packet;
 
 class I2C {
 public:
@@ -35,12 +42,15 @@ public:
     void init();
     bool write(uint8_t address, uint8_t reg, uint8_t data);
     bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+        bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+    void IRQhandler();
 private:
-    bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+
     bool tryWrite(uint8_t address, uint8_t reg, uint8_t data);
     bool waitForFlagSet(volatile uint32_t& reg, uint32_t flag);
     bool waitForFlagClear(volatile uint32_t& reg, uint32_t flag);
     uint8_t checkErrors(uint16_t timeout);
     I2C_TypeDef* _i2c;
-    uint8_t _state;
+    volatile uint8_t _state;
+    I2C_packet _packet;
 };

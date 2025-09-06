@@ -14,6 +14,19 @@ void I2C::init(){
     _i2c->TRISE = (I2C_FAST_MODE_MAX_RISE_TIME * (PCLK1 / 1000000))/1000 + 1;
     
     _i2c->CR1 |= I2C_CR1_PE;
+    _packet = {0};
+    _state = I2C_STATE_IDLE;
+
+    if (_i2c == I2C1) {
+        NVIC_EnableIRQ(I2C1_EV_IRQn);
+        NVIC_EnableIRQ(I2C1_ER_IRQn);
+    } else if (_i2c == I2C2) {
+        NVIC_EnableIRQ(I2C2_EV_IRQn);
+        NVIC_EnableIRQ(I2C2_ER_IRQn);
+    } else if (_i2c == I2C3) {
+        NVIC_EnableIRQ(I2C3_EV_IRQn);
+        NVIC_EnableIRQ(I2C3_ER_IRQn);
+    }
 }
 
 /*
@@ -138,7 +151,13 @@ bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
 bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
+    // while(_state == I2C_STATE_BUSY);
+
+    _state = I2C_STATE_BUSY;
+
     if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
+    (void)_i2c->SR1;
+    (void)_i2c->SR2;
     _i2c->CR1 |= I2C_CR1_START;
 
     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
@@ -161,20 +180,68 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     _i2c->CR1 |= I2C_CR1_ACK;
 
-    while (n > 0) {
-        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+    _packet.addr = address;
+    _packet.reg = reg;
+    _packet.index = 0;
+    _packet.error_counter = 0;
+    _packet.read_buffer_ptr = buffer;
+    _packet.length = n;
 
-        if (n == 1) {
-            _i2c->CR1 &= ~I2C_CR1_ACK;
-            _i2c->CR1 |= I2C_CR1_STOP;
-        }
-
-        *buffer++ = _i2c->DR;
-        n--;
+    if(n > 1){
+        _i2c->CR1 |= I2C_CR1_ACK;
+    } 
+    else{
+        _i2c->CR1 &= ~I2C_CR1_ACK;
+        _i2c->CR1 |= I2C_CR1_STOP;
     }
 
+    _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITERREN);
+    _i2c->CR2  |=I2C_CR2_ITEVTEN;   
+
+    // while (n > 0) {
+    //     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+
+    //     if (n == 1) {
+    //         _i2c->CR1 &= ~I2C_CR1_ACK;
+    //         _i2c->CR1 |= I2C_CR1_STOP;
+    //     }
+
+    //     *buffer++ = _i2c->DR;
+    //     n--;
+    // }
+     while(_state != I2C_STATE_DONE);
     return true;
 }
+
+ void I2C::IRQhandler(){
+    uint32_t SR1_tmp = _i2c->SR1;
+
+    if (SR1_tmp & I2C_SR1_SB) {
+    // Send slave address (write for reg, read for data)
+    _i2c->DR = (_packet.addr << 1) | 1;
+}
+
+if(_i2c->SR1 & I2C_SR1_ADDR){
+        (void)_i2c->SR1;
+        (void)_i2c->SR2;
+}
+
+    if ((SR1_tmp & I2C_SR1_RXNE)) {
+        _packet.read_buffer_ptr[_packet.index++] = _i2c->DR;
+
+        if (_packet.index == _packet.length - 1) {
+            _i2c->CR1 &= ~I2C_CR1_ACK;
+        }
+
+        if (_packet.index >= _packet.length) {
+            _i2c->CR1 |= I2C_CR1_STOP;
+
+            _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITERREN);
+            _i2c->CR2 &= ~I2C_CR2_ITEVTEN;   
+            _state = I2C_STATE_DONE;
+        }
+    }
+ }
 
 bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){
     uint16_t timeout = I2C_TIMEOUT_VAL;
