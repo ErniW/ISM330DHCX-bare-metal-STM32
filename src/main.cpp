@@ -59,13 +59,49 @@ int main(){
     ISM330.gyroInterruptEnable();
 
     while(1){
-        int16_t x = 0;
-        int16_t y = 0;
-        int16_t z = 0;
+        if(ISM330.isGyroDataReady && ISM330.state == IMU_STATE_IDLE){
+            ISM330.state = IMU_STATE_GET_GYRO_DATA;
+            ISM330.isGyroDataReady = false;
+        }
 
-        ISM330.readAccel(x, y, z);
+        switch(ISM330.state){
+            case IMU_STATE_IDLE:
 
-        printf("%d, %d, %d\n", x, y, z);
+                break;
+            case IMU_STATE_GET_GYRO_DATA:
+                ISM330.requestGyro();
+                break;
+            case IMU_STATE_GET_ACCEL_DATA:
+                ISM330.requestAccel();
+                break;
+            case IMU_STATE_COMPUTE_FUSION:
+                //ISM330.getIMU();
+                // printf("%d, %d, %d\n", ISM330.ax, ISM330.ay, ISM330.az);
+                ISM330.state = IMU_STATE_IDLE;
+                break;
+        }
+
+        //tutaj pobierać bezpośrednio z obiektu i sprawdzać adres z którego jest data ready.
+        if(i2c._state == I2C_STATE_DATA_READY){
+            switch(ISM330.state){
+                case IMU_STATE_WAIT_FOR_GYRO_DATA:
+                    ISM330.gx = (i2c._packet.buffer[1] << 8 | i2c._packet.buffer[0]);
+                    ISM330.gy = (i2c._packet.buffer[3] << 8 | i2c._packet.buffer[2]);
+                    ISM330.gz = (i2c._packet.buffer[5] << 8 | i2c._packet.buffer[4]);
+                    ISM330.state = IMU_STATE_GET_ACCEL_DATA;
+                    break;
+                case IMU_STATE_WAIT_FOR_ACCEL_DATA:
+                    ISM330.ax = (i2c._packet.buffer[1] << 8 | i2c._packet.buffer[0]);
+                    ISM330.ay = (i2c._packet.buffer[3] << 8 | i2c._packet.buffer[2]);
+                    ISM330.az = (i2c._packet.buffer[5] << 8 | i2c._packet.buffer[4]);
+                    ISM330.state = IMU_STATE_COMPUTE_FUSION;
+                    break;
+            }
+
+            printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
+
+            i2c._state =I2C_STATE_IDLE;
+        }
     }
 
 }

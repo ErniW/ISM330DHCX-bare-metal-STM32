@@ -24,13 +24,13 @@ enum{
 enum {
     I2C_STATE_IDLE,
     I2C_STATE_BUSY,
-    I2C_STATE_DONE,
+    I2C_STATE_DATA_READY,
 };
 
 typedef struct{
     uint8_t addr;
     uint8_t reg;
-    uint8_t* read_buffer_ptr;
+    uint8_t buffer[6];
     uint8_t length;
     uint8_t index;
     uint8_t error_counter;
@@ -44,7 +44,7 @@ public:
     bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     bool asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     void beginAsyncRead();
-        
+    I2C_packet _packet;
     void IRQhandler();
        volatile uint8_t _state;
        bool ready;
@@ -58,5 +58,5 @@ private:
     uint8_t checkErrors(uint16_t timeout);
     I2C_TypeDef* _i2c;
  
-    I2C_packet _packet;
+   
 };

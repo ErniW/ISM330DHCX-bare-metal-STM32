@@ -50,7 +50,10 @@ void I2C::init(){
 
 bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
+    while(_state != I2C_STATE_IDLE);
+
     uint8_t retries = I2C_WRITE_RETRIES;
+    _state = I2C_STATE_BUSY;
 
     while(retries--){
 
@@ -71,8 +74,10 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
             continue;
 
         //Check if data is updated correctly
-        if(verifyData == updatedData)
+        if(verifyData == updatedData){
+            _state = I2C_STATE_IDLE;
             return true;
+        } 
 
         //Restart I2C bus before last attempt
         if(retries == 1){
@@ -83,6 +88,7 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
     
     //if we went this far, do a hardfault if necessary
     //faultHandler();
+    _state = I2C_STATE_IDLE;
     return false;
 }
 
@@ -130,6 +136,7 @@ bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
 
 bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
+    //poprawić by było w pełni synchroniczne
     static uint8_t error_counter = 0;
 
     if(!tryRead(address, reg, buffer, n)){
@@ -150,7 +157,6 @@ bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 }
 
 bool I2C::beginRead(uint8_t address, uint8_t reg){
-    _state = I2C_STATE_BUSY;
 
     if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
     _i2c->CR1 |= I2C_CR1_START;
@@ -207,7 +213,7 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
         n--;
     }
 
-    _state = I2C_STATE_IDLE;
+    
     return true;
 }
 
@@ -216,7 +222,7 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     _packet.reg = reg;
     _packet.index = 0;
     // _packet.error_counter = 0;
-    _packet.read_buffer_ptr = buffer;
+    // _packet.read_buffer_ptr = buffer;
     _packet.length = n;
 
     if(!beginRead(address, reg))
@@ -231,6 +237,8 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
         _i2c->CR1 &=~ I2C_CR1_ACK;
         _i2c->CR1 |= I2C_CR1_STOP;
     }
+
+    return true;
 }
 
 void I2C::beginAsyncRead(){
@@ -248,7 +256,7 @@ void I2C::beginAsyncRead(){
 
     // RXNE: regular received byte
     if (SR1_tmp & I2C_SR1_RXNE) {
-        _packet.read_buffer_ptr[_packet.index++] = _i2c->DR;
+        _packet.buffer[_packet.index++] = _i2c->DR;
 
         if (_packet.index == _packet.length - 1) {
             // volatile uint32_t t = _i2c->DR;
@@ -261,7 +269,7 @@ void I2C::beginAsyncRead(){
         if (_packet.index >= _packet.length) {
              // STOP here
               _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
-            _state = I2C_STATE_IDLE;
+            _state = I2C_STATE_DATA_READY;
             // volatile uint32_t t = _i2c->DR;
         }
     }

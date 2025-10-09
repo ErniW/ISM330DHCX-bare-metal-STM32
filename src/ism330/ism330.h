@@ -115,6 +115,15 @@ enum gyroDPS{
     GYRO_2000_DPS = (3 << 2),
 };
 
+enum IMUstate{
+    IMU_STATE_IDLE,
+    IMU_STATE_GET_GYRO_DATA,
+    IMU_STATE_WAIT_FOR_GYRO_DATA,
+    IMU_STATE_GET_ACCEL_DATA,
+    IMU_STATE_WAIT_FOR_ACCEL_DATA,
+    IMU_STATE_COMPUTE_FUSION
+};
+
 class ISM330DHCX {
 public:
     ISM330DHCX(uint8_t address, I2C* i2c);
@@ -130,6 +139,16 @@ public:
     void gyroInterruptEnable();
     volatile bool isGyroDataReady;
     FusionQuaternion quaternion;
+    uint8_t state;
+    int16_t ax;
+    int16_t ay;
+    int16_t az;
+    int16_t gx;
+    int16_t gy;
+    int16_t gz;
+    bool requestGyro();
+    bool requestAccel();
+    // void getIMU();
 private:
     float gyroSensitivity;
     float accelSensitivity;

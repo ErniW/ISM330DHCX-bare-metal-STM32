@@ -68,6 +68,18 @@ bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
     return true;
 }
 
+bool ISM330DHCX::requestGyro(){
+    _i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6);
+    state = IMU_STATE_WAIT_FOR_GYRO_DATA;
+    return true;
+}
+
+bool ISM330DHCX::requestAccel(){
+    _i2c->asyncRead(_address, READ_ACCEL, _i2c->_packet.buffer, 6);
+    state = IMU_STATE_WAIT_FOR_ACCEL_DATA;
+    return true;
+}
+
 void ISM330DHCX::calibrateGyro(uint16_t samples){
     float avgX = 0; 
     float avgY = 0;
@@ -255,3 +267,4 @@ uint8_t ISM330DHCX::readSingleTap(){
     state &= 0xF;
     return state;
 }
+
