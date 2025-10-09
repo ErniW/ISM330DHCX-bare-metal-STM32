@@ -42,13 +42,16 @@ public:
     void init();
     bool write(uint8_t address, uint8_t reg, uint8_t data);
     bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+    bool asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     void beginAsyncRead();
-        bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n, bool async);
+        
     void IRQhandler();
        volatile uint8_t _state;
        bool ready;
 private:
-
+    bool beginRead(uint8_t address, uint8_t reg);
+    bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
+    bool tryAsyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     bool tryWrite(uint8_t address, uint8_t reg, uint8_t data);
     bool waitForFlagSet(volatile uint32_t& reg, uint32_t flag);
     bool waitForFlagClear(volatile uint32_t& reg, uint32_t flag);
