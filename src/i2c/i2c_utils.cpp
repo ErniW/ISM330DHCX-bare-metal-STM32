@@ -36,7 +36,6 @@ void I2C1_manualRestart(){
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
     I2C1_gpioConfig();
- 
 }
 
 void I2C1_gpioConfig(){

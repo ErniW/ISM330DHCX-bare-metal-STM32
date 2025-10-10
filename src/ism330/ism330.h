@@ -148,6 +148,8 @@ public:
     int16_t gz;
     bool requestGyro();
     bool requestAccel();
+    void acquireGyroData();
+    void acquireAccelData();
     // void getIMU();
 private:
     float gyroSensitivity;

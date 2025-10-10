@@ -25,6 +25,7 @@ enum {
     I2C_STATE_IDLE,
     I2C_STATE_BUSY,
     I2C_STATE_DATA_READY,
+    I2C_STATE_ERROR,
 };
 
 typedef struct{
@@ -46,8 +47,10 @@ public:
     void beginAsyncRead();
     I2C_packet _packet;
     void IRQhandler();
+    void IRQerrorHandler();
        volatile uint8_t _state;
        bool ready;
+       I2C_TypeDef* _i2c;
 private:
     bool beginRead(uint8_t address, uint8_t reg);
     bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
@@ -56,7 +59,7 @@ private:
     bool waitForFlagSet(volatile uint32_t& reg, uint32_t flag);
     bool waitForFlagClear(volatile uint32_t& reg, uint32_t flag);
     uint8_t checkErrors(uint16_t timeout);
-    I2C_TypeDef* _i2c;
+    
  
    
 };

@@ -23,6 +23,8 @@ extern "C" void __disable_irq(void);
 extern "C" void __enable_irq(void);
 extern "C" void __enable_fault_irq(void);
 
+bool errori2c = false;
+
 int main(){
     SCB->CPACR |= (0xF << 20);
 
@@ -59,14 +61,36 @@ int main(){
     ISM330.gyroInterruptEnable();
 
     while(1){
-        if(ISM330.isGyroDataReady && ISM330.state == IMU_STATE_IDLE){
-            ISM330.state = IMU_STATE_GET_GYRO_DATA;
-            ISM330.isGyroDataReady = false;
+
+        if(i2c._state == I2C_STATE_DATA_READY){
+            switch(ISM330.state){
+                case IMU_STATE_WAIT_FOR_GYRO_DATA:
+                    ISM330.acquireGyroData();
+                    ISM330.state = IMU_STATE_GET_ACCEL_DATA;
+                    break;
+                case IMU_STATE_WAIT_FOR_ACCEL_DATA:
+                    ISM330.acquireAccelData();
+                    ISM330.state = IMU_STATE_COMPUTE_FUSION;
+                    break;
+            }
+
+            
+            i2c._state = I2C_STATE_IDLE;
+        }
+        else if(i2c._state == I2C_STATE_ERROR){
+            printf("manual restart\n");
+            
+            I2C1_manualRestart();
+            i2c.init();
+            i2c._state = I2C_STATE_IDLE;
         }
 
         switch(ISM330.state){
-            case IMU_STATE_IDLE:
-
+             case IMU_STATE_IDLE:
+                if(ISM330.isGyroDataReady){
+                    ISM330.state = IMU_STATE_GET_GYRO_DATA;
+                    ISM330.isGyroDataReady = false;
+                }
                 break;
             case IMU_STATE_GET_GYRO_DATA:
                 ISM330.requestGyro();
@@ -75,32 +99,12 @@ int main(){
                 ISM330.requestAccel();
                 break;
             case IMU_STATE_COMPUTE_FUSION:
-                //ISM330.getIMU();
-                // printf("%d, %d, %d\n", ISM330.ax, ISM330.ay, ISM330.az);
+                printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
+
                 ISM330.state = IMU_STATE_IDLE;
                 break;
-        }
-
-        //tutaj pobierać bezpośrednio z obiektu i sprawdzać adres z którego jest data ready.
-        if(i2c._state == I2C_STATE_DATA_READY){
-            switch(ISM330.state){
-                case IMU_STATE_WAIT_FOR_GYRO_DATA:
-                    ISM330.gx = (i2c._packet.buffer[1] << 8 | i2c._packet.buffer[0]);
-                    ISM330.gy = (i2c._packet.buffer[3] << 8 | i2c._packet.buffer[2]);
-                    ISM330.gz = (i2c._packet.buffer[5] << 8 | i2c._packet.buffer[4]);
-                    ISM330.state = IMU_STATE_GET_ACCEL_DATA;
-                    break;
-                case IMU_STATE_WAIT_FOR_ACCEL_DATA:
-                    ISM330.ax = (i2c._packet.buffer[1] << 8 | i2c._packet.buffer[0]);
-                    ISM330.ay = (i2c._packet.buffer[3] << 8 | i2c._packet.buffer[2]);
-                    ISM330.az = (i2c._packet.buffer[5] << 8 | i2c._packet.buffer[4]);
-                    ISM330.state = IMU_STATE_COMPUTE_FUSION;
-                    break;
-            }
-
-            printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
-
-            i2c._state =I2C_STATE_IDLE;
+            default:
+                break;
         }
     }
 
@@ -117,4 +121,11 @@ void EXTI15_10_IRQHandler(void){
 
 extern "C" void I2C1_EV_IRQHandler(void) {
     i2c.IRQhandler();
+}
+
+extern "C" void I2C1_ER_IRQHandler(void){
+    printf("Error\n");
+    i2c.IRQerrorHandler();
+    ISM330.state = IMU_STATE_IDLE;
+    i2c._state = I2C_STATE_ERROR;
 }

@@ -218,17 +218,26 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 }
 
 bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
+
+    while(_state != I2C_STATE_IDLE);
+    _state = I2C_STATE_BUSY;
+
     _packet.addr = address;
     _packet.reg = reg;
     _packet.index = 0;
     // _packet.error_counter = 0;
     // _packet.read_buffer_ptr = buffer;
     _packet.length = n;
+    
 
     if(!beginRead(address, reg))
+    {
+        _state = I2C_STATE_IDLE;
         return false;
+    }
+        
 
-    _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
+    _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
 
     if(_packet.length > 1){
         _i2c->CR1 |= I2C_CR1_ACK;
@@ -268,12 +277,41 @@ void I2C::beginAsyncRead(){
 
         if (_packet.index >= _packet.length) {
              // STOP here
-              _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
+              _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN );
             _state = I2C_STATE_DATA_READY;
             // volatile uint32_t t = _i2c->DR;
         }
     }
  }
+
+void I2C::IRQerrorHandler(){
+
+    volatile uint32_t err = _i2c->SR1;
+
+    if(err & I2C_SR1_BERR){
+        _i2c->SR1 &= ~I2C_SR1_BERR;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
+    if(err & I2C_SR1_ARLO){
+        _i2c->SR1 &= ~I2C_SR1_ARLO;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
+    if(err & I2C_SR1_AF){
+        _i2c->SR1 &= ~I2C_SR1_AF;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
+    if(err & I2C_SR1_OVR){
+        _i2c->SR1 &= ~I2C_SR1_OVR;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
+    if(err & I2C_SR1_TIMEOUT){
+        _i2c->SR1 &= ~I2C_SR1_TIMEOUT;
+        _i2c->CR1 |= I2C_CR1_STOP;
+    }
+
+    _i2c->CR2 &=~ (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
+    _i2c->CR1 |= I2C_CR1_STOP;
+}
 
 bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){
     uint16_t timeout = I2C_TIMEOUT_VAL;

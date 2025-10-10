@@ -69,15 +69,33 @@ bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
 }
 
 bool ISM330DHCX::requestGyro(){
-    _i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6);
+    // _i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6);
+
+    if(!_i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6))
+        return false;
+
     state = IMU_STATE_WAIT_FOR_GYRO_DATA;
     return true;
 }
 
 bool ISM330DHCX::requestAccel(){
-    _i2c->asyncRead(_address, READ_ACCEL, _i2c->_packet.buffer, 6);
+    if(!_i2c->asyncRead(_address, READ_ACCEL, _i2c->_packet.buffer, 6))
+        return false;
+        
     state = IMU_STATE_WAIT_FOR_ACCEL_DATA;
     return true;
+}
+
+void ISM330DHCX::acquireGyroData(){
+    gx = (_i2c->_packet.buffer[1] << 8 | _i2c->_packet.buffer[0]);
+    gy = (_i2c->_packet.buffer[3] << 8 | _i2c->_packet.buffer[2]);
+    gz = (_i2c->_packet.buffer[5] << 8 | _i2c->_packet.buffer[4]);
+}
+
+void ISM330DHCX::acquireAccelData(){
+    ax = (_i2c->_packet.buffer[1] << 8 | _i2c->_packet.buffer[0]);
+    ay = (_i2c->_packet.buffer[3] << 8 | _i2c->_packet.buffer[2]);
+    az = (_i2c->_packet.buffer[5] << 8 | _i2c->_packet.buffer[4]);
 }
 
 void ISM330DHCX::calibrateGyro(uint16_t samples){
