@@ -240,7 +240,7 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     while(_state != I2C_STATE_IDLE);
-    while(DMA1_Stream0->CR & DMA_SxCR_EN);
+   
     _state = I2C_STATE_BUSY;
 
     _packet.addr = address;
@@ -258,6 +258,7 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     // Set ACK if multi-byte
     if(n > 1) _i2c->CR1 |= I2C_CR1_ACK;
 
+    _i2c->CR2 |= I2C_CR2_ITERREN;
     // Configure DMA
     DMA1_Stream0->CR &= ~DMA_SxCR_EN;
     while(DMA1_Stream0->CR & DMA_SxCR_EN);
@@ -336,6 +337,7 @@ void I2C::IRQerrorHandler(){
 
     _i2c->CR2 &=~ (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
     _i2c->CR1 |= I2C_CR1_STOP;
+    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
     _state = I2C_STATE_ERROR;
 }
 
