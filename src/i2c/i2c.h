@@ -44,13 +44,11 @@ public:
     bool write(uint8_t address, uint8_t reg, uint8_t data);
     bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     bool asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
-    void beginAsyncRead();
-    I2C_packet _packet;
     void IRQhandler();
     void IRQerrorHandler();
     void IRQdmaTransferCompleteHandler();
     volatile uint8_t _state;
-    bool ready;
+    I2C_packet _packet;
     I2C_TypeDef* _i2c;
     DMA_TypeDef* _dma;
     DMA_Stream_TypeDef* _dmaStream;

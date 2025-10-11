@@ -4,10 +4,10 @@
 *It was my experiment with some concepts, never intended to publish. Later I decided to finish it. I mostly code bare-metal stuff in C but here for reasons I don't remember is C++.*
 
 ### Some features:
-- Quaternion based computation to avoid gimbal lock, values are later converted to euler angles for readability.
-- Interrupt-driven measurment of gyroscope data for proper integration.
-- Separate timer to count delta_t. (Fixed delta_t that matches gyro frequency seems to not work properly).
-- Proper interrupt-driven I2C library with error detection, retries and validation.
+- **Fully developed I2C with DMA** (for reading), error detection, write verification, bus recovery, retries.
+- **Data noise reduction** with offset calibration, noise threshold, kalman filter.
+- **Interrupt-driven measurment** of gyroscope data for proper integration with internal timer to compute d_t.
+- **Non-blocking state machine** for Reading gyroscope, accelerometer and sensor fusion.
 - Tap detection and pedometer.
 
 ### Possible improvements:

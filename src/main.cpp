@@ -23,8 +23,6 @@ extern "C" void __disable_irq(void);
 extern "C" void __enable_irq(void);
 extern "C" void __enable_fault_irq(void);
 
-bool errori2c = false;
-
 int main(){
     SCB->CPACR |= (0xF << 20);
 
