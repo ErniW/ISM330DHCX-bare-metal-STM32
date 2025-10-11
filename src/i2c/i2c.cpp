@@ -227,14 +227,11 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     // _packet.read_buffer_ptr = buffer;
     _packet.length = n;
     
-
-    uint8_t error_counter = 0;
-
-    // if(!beginRead(address, reg))
-    // {
-    //     _state = I2C_STATE_ERROR;
-    //     return false;
-    // }
+    if(!beginRead(address, reg))
+    {
+        _state = I2C_STATE_ERROR;
+        return false;
+    }
 
     _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
 

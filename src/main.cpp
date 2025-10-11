@@ -58,7 +58,10 @@ int main(){
         GYRO_1000_DPS
     );
 
+
+    ISM330.gyroCalibrate(100);
     ISM330.gyroInterruptEnable();
+    
 
     uint8_t cnt = 0;
 

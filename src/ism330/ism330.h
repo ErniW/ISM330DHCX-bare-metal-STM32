@@ -160,7 +160,6 @@ private:
     int16_t gy;
     int16_t gz;
     float dt;
-    uint32_t timestamp;
     uint32_t timestampLast;
     float gyroSensitivity;
     float accelSensitivity;

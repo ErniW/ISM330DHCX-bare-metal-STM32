@@ -43,13 +43,11 @@ bool ISM330DHCX::accelReadBlocking(int16_t& x, int16_t& y, int16_t& z){
 
     _i2c->read(_address, READ_ACCEL, buffer, 6);
 
-    while(_i2c->_state == I2C_STATE_BUSY);
+    // while(_i2c->_state == I2C_STATE_BUSY);
 
     x = (buffer[1] << 8 | buffer[0]);
     y = (buffer[3] << 8 | buffer[2]);
     z = (buffer[5] << 8 | buffer[4]);
-
-    
 
     return true;
 }
@@ -107,6 +105,7 @@ void ISM330DHCX::gyroCalibrate(uint16_t samples){
     float avgY = 0;
     float avgZ = 0;
 
+    delay_ms(100);
     for(uint16_t i=0; i<samples; i++){
         int16_t gx, gy, gz = 0;
         gyroReadBlocking(gx, gy, gz);
