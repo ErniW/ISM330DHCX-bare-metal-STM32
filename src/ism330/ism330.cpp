@@ -37,7 +37,7 @@ void ISM330DHCX::gyroInterruptEnable()
  
 }
 
-bool ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
+bool ISM330DHCX::accelReadBlocking(int16_t& x, int16_t& y, int16_t& z){
 
     uint8_t buffer[6] = {0};
 
@@ -55,7 +55,7 @@ bool ISM330DHCX::readAccel(int16_t& x, int16_t& y, int16_t& z){
 }
 
 
-bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
+bool ISM330DHCX::gyroReadBlocking(int16_t& x, int16_t& y, int16_t& z){
 
     uint8_t buffer[6] = {0};
 
@@ -68,7 +68,7 @@ bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
     return true;
 }
 
-bool ISM330DHCX::requestGyro(){
+bool ISM330DHCX::gyroRequest(){
     if(!_i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6))
         return false;
 
@@ -76,7 +76,7 @@ bool ISM330DHCX::requestGyro(){
     return true;
 }
 
-bool ISM330DHCX::requestAccel(){
+bool ISM330DHCX::accelRequest(){
     if(!_i2c->asyncRead(_address, READ_ACCEL, _i2c->_packet.buffer, 6))
         return false;
         
@@ -102,14 +102,14 @@ void ISM330DHCX::gyroInterruptHandler(){
     isGyroDataReady = false;   
 }
 
-void ISM330DHCX::calibrateGyro(uint16_t samples){
+void ISM330DHCX::gyroCalibrate(uint16_t samples){
     float avgX = 0; 
     float avgY = 0;
     float avgZ = 0;
 
     for(uint16_t i=0; i<samples; i++){
-        int16_t gx,gy,gz = 0;
-        readGyro(gx,gy,gz);
+        int16_t gx, gy, gz = 0;
+        gyroReadBlocking(gx, gy, gz);
         avgX += (float)gx;
         avgY += (float)gy;
         avgZ += (float)gz;
@@ -178,29 +178,32 @@ float ISM330DHCX::getDt(uint32_t timestamp){
     - Drop invalid data and noise below threshold.
     - Quaternion based.
 */
-void ISM330DHCX::getIMU() {
-    float axf = ax * accelSensitivity;
-    float ayf = ay * accelSensitivity;
-    float azf = az * accelSensitivity;
+void ISM330DHCX::computeIMU() {
 
-    axf = accelFilterX.update(axf);
-    ayf = accelFilterY.update(ayf);
-    azf = accelFilterZ.update(azf);
+    FusionVector gyroscope = {
+        (float)gx - gyroCalibrationX, 
+        (float)gy - gyroCalibrationY,
+        (float)gz - gyroCalibrationZ
+    };
 
-    float gxf = (float)gx - gyroCalibrationX;
-    float gyf = (float)gy - gyroCalibrationY;
-    float gzf = (float)gz - gyroCalibrationZ;
+    if(fabs(gyroscope.axis.x) < GYRO_NOISE_THRESHOLD) gyroscope.axis.x = 0.0f;
+    if(fabs(gyroscope.axis.y) < GYRO_NOISE_THRESHOLD) gyroscope.axis.y = 0.0f;
+    if(fabs(gyroscope.axis.z) < GYRO_NOISE_THRESHOLD) gyroscope.axis.z = 0.0f;
 
-    if(fabs(gxf) < GYRO_NOISE_THRESHOLD) gxf = 0.0f;
-    if(fabs(gyf) < GYRO_NOISE_THRESHOLD) gyf = 0.0f;
-    if(fabs(gzf) < GYRO_NOISE_THRESHOLD) gzf = 0.0f;
+    gyroscope.axis.x *= gyroSensitivity;
+    gyroscope.axis.y *= gyroSensitivity;
+    gyroscope.axis.z *= gyroSensitivity;
 
-    gxf *= gyroSensitivity;
-    gyf *= gyroSensitivity;
-    gzf *= gyroSensitivity;
+    FusionVector accelerometer = {
+        ax * accelSensitivity,
+        ay * accelSensitivity,
+        az * accelSensitivity
+    };
 
-    FusionVector gyroscope = {gxf, gyf, gzf};
-    FusionVector accelerometer = {axf, ayf, azf};
+    accelerometer.axis.x = accelFilterX.update(accelerometer.axis.x);
+    accelerometer.axis.y = accelFilterY.update(accelerometer.axis.y);
+    accelerometer.axis.z = accelFilterZ.update(accelerometer.axis.z);
+
     gyroscope = FusionOffsetUpdate(&offset, gyroscope);
     FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
     quaternion = FusionAhrsGetQuaternion(&ahrs);
@@ -208,31 +211,24 @@ void ISM330DHCX::getIMU() {
 
 
 
-void ISM330DHCX::enablePedometer(){
-
-    //tutaj musiałbym odczytywać wartość a następnie ustawić.
-
+void ISM330DHCX::pedometerEnable(){
     _i2c->write(_address, FUNC_CFG_ACCESS, FUNC_CFG_ACCESS_EN);
     _i2c->write(_address, EMB_FUNC_EN_A, PEDO_EN);
     _i2c->write(_address, FUNC_CFG_ACCESS, 0x00);
 }
 
-uint16_t ISM330DHCX::readPedometer(){
+uint16_t ISM330DHCX::pedometeRead(){
 
     uint16_t steps = 0;
 
     _i2c->write(_address, FUNC_CFG_ACCESS, FUNC_CFG_ACCESS_EN);
-
     _i2c->read(_address, EMB_FUNC_STEP_COUNTER_L, (uint8_t*)&steps, 2);
-
     _i2c->write(_address, FUNC_CFG_ACCESS, 0x00);
 
     return steps;
-
 }
 
-void ISM330DHCX::enableSingleTap(){
-
+void ISM330DHCX::singleTapEnable(){
     _i2c->write(_address, TAP_CFG0, INT_CLR_ON_READ | TAP_X_EN | TAP_Y_EN | TAP_Z_EN);
     _i2c->write(_address, TAP_CFG1, TAP_THRESHOLD_X);
     _i2c->write(_address, TAP_CFG2, INTERRUPTS_EN | TAP_THRESHOLD_Y);
@@ -240,7 +236,7 @@ void ISM330DHCX::enableSingleTap(){
     _i2c->write(_address, INT_DUR2, TAP_SHOCK | TAP_QUIET);
 }
 
-uint8_t ISM330DHCX::readSingleTap(){
+uint8_t ISM330DHCX::singleTapRead(){
      uint8_t state;
 
     _i2c->read(_address, TAP_SRC, &state, 1);

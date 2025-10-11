@@ -128,47 +128,49 @@ enum IMUstate{
 
 class ISM330DHCX {
 public:
-    ISM330DHCX(uint8_t address, I2C* i2c);
-    void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
-    bool readGyro(int16_t& x, int16_t& y, int16_t& z);
-    bool readAccel(int16_t& x, int16_t& y, int16_t& z);
-    void getIMU();
-    void calibrateGyro(uint16_t samples);
-    void enablePedometer();
-    uint8_t readSingleTap();
-    uint16_t readPedometer();
-    void enableSingleTap();
-    void gyroInterruptEnable();
-    volatile bool isGyroDataReady;
     FusionQuaternion quaternion;
     volatile uint8_t state;
+    volatile bool isGyroDataReady;
+    ISM330DHCX(uint8_t address, I2C* i2c);
+    void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
+
+    void gyroInterruptEnable();
+    void gyroInterruptHandler();
+    bool gyroRequest();
+    void gyroDataReadyHandler();
+    void gyroCalibrate(uint16_t samples);
+    bool gyroReadBlocking(int16_t& x, int16_t& y, int16_t& z);
+   
+    bool accelRequest();
+    void accelDataReadyHandler();
+    bool accelReadBlocking(int16_t& x, int16_t& y, int16_t& z);
+
+    void computeIMU();
+
+    void pedometerEnable();
+    uint16_t pedometeRead();
+    void singleTapEnable();
+    uint8_t singleTapRead();
+private:
+    FusionAhrs ahrs;
     int16_t ax;
     int16_t ay;
     int16_t az;
     int16_t gx;
     int16_t gy;
     int16_t gz;
+    float dt;
     uint32_t timestamp;
     uint32_t timestampLast;
-    float dt;
-    void gyroInterruptHandler();
-    bool requestGyro();
-    bool requestAccel();
-    void gyroDataReadyHandler();
-    void accelDataReadyHandler();
-    // void getIMU();
-private:
     float gyroSensitivity;
     float accelSensitivity;
     float gyroCalibrationX;
     float gyroCalibrationY;
     float gyroCalibrationZ;
-
-    FusionAhrs ahrs;
-    FusionOffset offset;
     KalmanFilter1D accelFilterX;
     KalmanFilter1D accelFilterY;
     KalmanFilter1D accelFilterZ;
+    FusionOffset offset;
     uint8_t _address;
     I2C* _i2c;
     float getDt(uint32_t timestamp);

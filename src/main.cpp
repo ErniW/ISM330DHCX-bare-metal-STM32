@@ -85,20 +85,18 @@ int main(){
         }
 
         switch(ISM330.state){
-             case IMU_STATE_WAIT_FOR_INTERRUPT:
-                if(!ISM330.isGyroDataReady)
-                    break;
-
-                ISM330.gyroInterruptHandler();
+            case IMU_STATE_WAIT_FOR_INTERRUPT:
+                if(ISM330.isGyroDataReady)
+                    ISM330.gyroInterruptHandler();
                 break;
             case IMU_STATE_GET_GYRO_DATA:
-                ISM330.requestGyro();
+                ISM330.gyroRequest();
                 break;
             case IMU_STATE_GET_ACCEL_DATA:
-                ISM330.requestAccel();
+                ISM330.accelRequest();
                 break;
             case IMU_STATE_COMPUTE_FUSION:
-                ISM330.getIMU();
+                ISM330.computeIMU();
 
                 if(cnt % 10 == 0)
                     printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
@@ -113,9 +111,7 @@ int main(){
 
 }
 
-extern "C" void EXTI15_10_IRQHandler(void);
-
-void EXTI15_10_IRQHandler(void){
+extern "C" void EXTI15_10_IRQHandler(void){
     if(EXTI->PR & INT1_PIN){
         ISM330.isGyroDataReady = true;
         EXTI->PR |= INT1_PIN;
