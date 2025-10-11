@@ -48,6 +48,7 @@ public:
     I2C_packet _packet;
     void IRQhandler();
     void IRQerrorHandler();
+    void IRQdmaTransferCompleteHandler();
     volatile uint8_t _state;
     bool ready;
     I2C_TypeDef* _i2c;

@@ -130,20 +130,7 @@ extern "C" void I2C1_ER_IRQHandler(void){
     ISM330.state = IMU_STATE_WAIT_FOR_INTERRUPT;
 }
 
-uint32_t test = 0;
-
 extern "C" void DMA1_Stream0_IRQHandler(void)
 {
-    if (DMA1->LISR & DMA_LISR_TCIF0)
-    {
-        test++;
-        DMA1->LIFCR = DMA_LIFCR_CTCIF0;
-        I2C1->CR2 &= ~I2C_CR2_DMAEN;
-        DMA1_Stream0->CR &= ~DMA_SxCR_EN;
-        // while(DMA1_Stream0->CR & DMA_SxCR_EN);
-         i2c._i2c->CR1 &= ~I2C_CR1_ACK;
-        I2C1->CR1 |= I2C_CR1_STOP;
-        i2c._state = I2C_STATE_DATA_READY;
-
-    }
+    i2c.IRQdmaTransferCompleteHandler();
 }

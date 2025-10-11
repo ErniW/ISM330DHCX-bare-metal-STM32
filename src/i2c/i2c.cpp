@@ -36,19 +36,19 @@ void I2C::init(){
     }
 
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
-    I2C1->CR2 |= I2C_CR2_DMAEN;
+    _i2c->CR2 |= I2C_CR2_DMAEN;
 
-    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
-    while (DMA1_Stream0->CR & DMA_SxCR_EN);
+    _dmaStream->CR &= ~DMA_SxCR_EN;
+    while (_dmaStream->CR & DMA_SxCR_EN);
 
-    DMA1->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0);
+    _dma->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CTEIF0);
 
-    DMA1_Stream0->CR |= DMA_SxCR_CHSEL_0;
-    DMA1_Stream0->CR |= DMA_SxCR_MINC;
+    _dmaStream->CR |= DMA_SxCR_CHSEL_0;
+    _dmaStream->CR |= DMA_SxCR_MINC;
 
 
-    DMA1_Stream0->FCR = 0;   
-     NVIC_EnableIRQ(DMA1_Stream0_IRQn);        
+    _dmaStream->FCR = 0;   
+    NVIC_EnableIRQ(DMA1_Stream0_IRQn);        
 }
 
 /*
@@ -255,57 +255,60 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
         return false;
     }
 
-    // Set ACK if multi-byte
     if(n > 1) _i2c->CR1 |= I2C_CR1_ACK;
-
     _i2c->CR2 |= I2C_CR2_ITERREN;
-    // Configure DMA
-    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
-    while(DMA1_Stream0->CR & DMA_SxCR_EN);
 
-    DMA1_Stream0->PAR  = (uint32_t)&_i2c->DR;
-    DMA1_Stream0->M0AR = (uint32_t)buffer;
-    DMA1_Stream0->NDTR = n;
+    while(_dmaStream->CR & DMA_SxCR_EN);
+    _dmaStream->PAR  = (uint32_t)&_i2c->DR;
+    _dmaStream->M0AR = (uint32_t)buffer;
+    _dmaStream->NDTR = n;
 
-    DMA1->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0);
-    DMA1_Stream0->CR |= DMA_SxCR_TCIE;
+    _dma->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CTEIF0);
+    _dmaStream->CR |= DMA_SxCR_TCIE;
 
     _i2c->CR2 |= I2C_CR2_DMAEN;
-    DMA1_Stream0->CR |= DMA_SxCR_EN;
+    _dmaStream->CR |= DMA_SxCR_EN;
 
-        return true;
+    return true;
+}
+
+void I2C::IRQdmaTransferCompleteHandler(){
+    if (_dma->LISR & DMA_LISR_TCIF0){
+        _dma->LIFCR = DMA_LIFCR_CTCIF0;
+        _dmaStream->CR &= ~DMA_SxCR_EN;
+        _i2c->CR2 &= ~I2C_CR2_DMAEN;
+
+        _i2c->CR1 &= ~I2C_CR1_ACK;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        _state = I2C_STATE_DATA_READY;
     }
+    if (_dma->LISR & DMA_LISR_TEIF0)
+    {
+        _dma->LIFCR = DMA_LIFCR_CTEIF0;
+        _dmaStream->CR &= ~DMA_SxCR_EN;
+        _i2c->CR2 &= ~I2C_CR2_DMAEN;
 
-void I2C::beginAsyncRead(){
-
+        _i2c->CR2 &= ~I2C_CR2_DMAEN;
+        _i2c->CR1 |= I2C_CR1_STOP;
+        _state = I2C_STATE_ERROR;
+    }
 }
 
  void I2C::IRQhandler(){
     uint32_t SR1_tmp = _i2c->SR1;
-//     uint32_t SR2_tmp = _i2c->SR2;
-//    if ((SR1_tmp & I2C_SR1_BTF)) {
-//         _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
-//     }
 
-//     printf("%x %x\n", SR1_tmp, SR2_tmp);
-
-    // RXNE: regular received byte
     if (SR1_tmp & I2C_SR1_RXNE) {
         _packet.buffer[_packet.index++] = _i2c->DR;
 
         if (_packet.index == _packet.length - 1) {
-            // volatile uint32_t t = _i2c->DR;
-            _i2c->CR1 &= ~I2C_CR1_ACK; // prepare NACK
+            _i2c->CR1 &= ~I2C_CR1_ACK;
             _i2c->CR1 |= I2C_CR1_STOP;
         }
 
-        
-
+    
         if (_packet.index >= _packet.length) {
-             // STOP here
-              _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN );
+            _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN );
             _state = I2C_STATE_DATA_READY;
-            // volatile uint32_t t = _i2c->DR;
         }
     }
  }
@@ -337,7 +340,7 @@ void I2C::IRQerrorHandler(){
 
     _i2c->CR2 &=~ (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
     _i2c->CR1 |= I2C_CR1_STOP;
-    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+    _dmaStream->CR &= ~DMA_SxCR_EN;
     _state = I2C_STATE_ERROR;
 }
 
@@ -397,123 +400,3 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
 
     return I2C_OK;
 }
-
-
-
-
-
-
-
-// bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
-
-//     if(_packet.error_counter == I2C_READ_RETRIES){
-//         I2C1_manualRestart();
-//         init();
-//         _packet.error_counter = 0;
-//     }
-
-//     if(!tryRead(address, reg, buffer, n)){
-//         _packet.error_counter++;
-
-//         if(_packet.error_counter == I2C_READ_RETRIES){
-//             I2C1_manualRestart();
-//             init();
-//             _packet.error_counter = 0;
-//         }
-
-//         printf("Error\n");
-//         return false;
-//     }
-        
-//     return true;
-// }
-
-
-// bool I2C::tryAsyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
-
-    // while(_state != I2C_STATE_IDLE);
-
-
-    // if(async){
-    //     _packet.addr = address;
-    //     _packet.reg = reg;
-    //     _packet.index = 0;
-    //     // _packet.error_counter = 0;
-    //     _packet.read_buffer_ptr = buffer;
-    //     _packet.length = n;
-    //     beginAsyncRead();
-    //     while(_state == I2C_STATE_BUSY);
-    //     return true;
-    // }
-
-
-    // while(_state != I2C_STATE_IDLE);
-
-    // _state = I2C_STATE_BUSY;
-   
-    // if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
-    //  _i2c->CR1 &= ~I2C_CR1_STOP;
-    // _i2c->CR1 |= I2C_CR1_START;
-
-    
-  
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
-    // _i2c->DR = address << 1;
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
-    // (void)_i2c->SR2;
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    // _i2c->DR = reg;
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    
-    // _i2c->CR1 |= I2C_CR1_START;
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
-    // _i2c->DR = address << 1 | 1;
-
-    // if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
-    // (void)_i2c->SR2;
-
-    // if(async){
-    //     _packet.addr = address;
-    //     _packet.reg = reg;
-    //     _packet.index = 0;
-    //     _packet.error_counter = 0;
-    //     _packet.read_buffer_ptr = buffer;
-    //     _packet.length = n;
-
-    //     _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN);
-
-    //     if(n > 1){
-    //         _i2c->CR1 |= I2C_CR1_ACK;
-    //     } 
-    //     else{
-    //         _i2c->CR1 &= ~I2C_CR1_ACK;
-    //         _i2c->CR1 |= I2C_CR1_STOP;
-    //     }
-
-    //      while(_state != I2C_STATE_IDLE);
-    //     return true;
-    // }
-  
-    // // if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;  
-    // _i2c->CR1 |= I2C_CR1_ACK;
-
-    // while (n > 0) {
-    //     if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
-
-    //     if (n == 1) {
-    //         _i2c->CR1 &= ~I2C_CR1_ACK;
-    //         _i2c->CR1 |= I2C_CR1_STOP;
-    //     }
-
-    //     *buffer++ = _i2c->DR;
-    //     n--;
-    // }
-     
-    // _state = I2C_STATE_IDLE;
-    // return true;
-// }
