@@ -16,7 +16,7 @@
 #define EXTI_C12    (2 << 0)
 #define INT1_PIN    (1 << 12)
 
-I2C i2c(I2C1);
+I2C i2c(I2C1, DMA1, DMA1_Stream0);
 ISM330DHCX ISM330((uint8_t)ADDRESS, &i2c);
 
 extern "C" void __disable_irq(void);
@@ -128,4 +128,21 @@ extern "C" void I2C1_EV_IRQHandler(void) {
 extern "C" void I2C1_ER_IRQHandler(void){
     i2c.IRQerrorHandler();
     ISM330.state = IMU_STATE_WAIT_FOR_INTERRUPT;
+}
+
+uint32_t test = 0;
+
+extern "C" void DMA1_Stream0_IRQHandler(void)
+{
+    if (DMA1->LISR & DMA_LISR_TCIF0)
+    {
+        test++;
+        DMA1->LIFCR = DMA_LIFCR_CTCIF0;  // clear flag
+        I2C1->CR2 &= ~I2C_CR2_DMAEN;     // disable I2C DMA
+        DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+        
+        I2C1->CR1 |= I2C_CR1_STOP;       // generate STOP
+        i2c._state = I2C_STATE_DATA_READY;
+
+    }
 }

@@ -2,7 +2,14 @@
 #include <string.h>
 #include <cstdio>
 
-I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
+// I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
+
+I2C::I2C(I2C_TypeDef* i2c, DMA_TypeDef* dma, DMA_Stream_TypeDef* dmaStream)
+{
+    _i2c = i2c;
+    _dma = dma;
+    _dmaStream = dmaStream;
+}
 
 void I2C::init(){
     _i2c->CR1 &=~ I2C_CR1_PE;
@@ -27,6 +34,21 @@ void I2C::init(){
         NVIC_EnableIRQ(I2C3_EV_IRQn);
         NVIC_EnableIRQ(I2C3_ER_IRQn);
     }
+
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+    I2C1->CR2 |= I2C_CR2_DMAEN;
+
+    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+    while (DMA1_Stream0->CR & DMA_SxCR_EN);
+
+    DMA1->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0);
+
+    DMA1_Stream0->CR |= DMA_SxCR_CHSEL_0;
+    DMA1_Stream0->CR |= DMA_SxCR_MINC;
+
+
+    DMA1_Stream0->FCR = 0;   
+     NVIC_EnableIRQ(DMA1_Stream0_IRQn);        
 }
 
 /*
@@ -218,6 +240,7 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     while(_state != I2C_STATE_IDLE);
+    while(DMA1_Stream0->CR & DMA_SxCR_EN);
     _state = I2C_STATE_BUSY;
 
     _packet.addr = address;
@@ -227,24 +250,30 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     // _packet.read_buffer_ptr = buffer;
     _packet.length = n;
     
-    if(!beginRead(address, reg))
-    {
+    if(!beginRead(address, reg)) {
         _state = I2C_STATE_ERROR;
         return false;
     }
 
-    _i2c->CR2 |= (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
+    // Set ACK if multi-byte
+    if(n > 1) _i2c->CR1 |= I2C_CR1_ACK;
 
-    if(_packet.length > 1){
-        _i2c->CR1 |= I2C_CR1_ACK;
-    } 
-    else{
-        _i2c->CR1 &=~ I2C_CR1_ACK;
-        _i2c->CR1 |= I2C_CR1_STOP;
+    // Configure DMA
+    DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+    while(DMA1_Stream0->CR & DMA_SxCR_EN);
+
+    DMA1_Stream0->PAR  = (uint32_t)&_i2c->DR;
+    DMA1_Stream0->M0AR = (uint32_t)buffer;
+    DMA1_Stream0->NDTR = n;
+
+    DMA1->LIFCR = (DMA_LIFCR_CTCIF0 | DMA_LIFCR_CHTIF0 | DMA_LIFCR_CTEIF0);
+    DMA1_Stream0->CR |= DMA_SxCR_TCIE;
+
+    _i2c->CR2 |= I2C_CR2_DMAEN;
+    DMA1_Stream0->CR |= DMA_SxCR_EN;
+
+        return true;
     }
-
-    return true;
-}
 
 void I2C::beginAsyncRead(){
 
