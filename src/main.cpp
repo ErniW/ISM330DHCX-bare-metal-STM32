@@ -60,6 +60,8 @@ int main(){
 
     ISM330.gyroInterruptEnable();
 
+    uint8_t cnt = 0;
+
     while(1){
 
         if(i2c._state == I2C_STATE_DATA_READY){
@@ -74,12 +76,9 @@ int main(){
                     break;
             }
 
-            
             i2c._state = I2C_STATE_IDLE;
         }
         else if(i2c._state == I2C_STATE_ERROR){
-            printf("manual restart\n");
-            
             I2C1_manualRestart();
             i2c.init();
             i2c._state = I2C_STATE_IDLE;
@@ -88,6 +87,7 @@ int main(){
         switch(ISM330.state){
              case IMU_STATE_IDLE:
                 if(ISM330.isGyroDataReady){
+                    ISM330.timestamp = timerGetTime();
                     ISM330.state = IMU_STATE_GET_GYRO_DATA;
                     ISM330.isGyroDataReady = false;
                 }
@@ -99,8 +99,13 @@ int main(){
                 ISM330.requestAccel();
                 break;
             case IMU_STATE_COMPUTE_FUSION:
-                printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
+                // printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
+                ISM330.getIMU();
 
+                if(cnt % 20 == 0)
+                    printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
+                cnt++;
+                
                 ISM330.state = IMU_STATE_IDLE;
                 break;
             default:
@@ -124,8 +129,6 @@ extern "C" void I2C1_EV_IRQHandler(void) {
 }
 
 extern "C" void I2C1_ER_IRQHandler(void){
-    printf("Error\n");
     i2c.IRQerrorHandler();
     ISM330.state = IMU_STATE_IDLE;
-    i2c._state = I2C_STATE_ERROR;
 }

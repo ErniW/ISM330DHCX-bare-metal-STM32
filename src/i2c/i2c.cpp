@@ -147,8 +147,6 @@ bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
             init();
             error_counter = 0;
         }
-
-        printf("Error\n");
         return false;
     }
 
@@ -232,7 +230,7 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     if(!beginRead(address, reg))
     {
-        _state = I2C_STATE_IDLE;
+        _state = I2C_STATE_ERROR;
         return false;
     }
         
@@ -311,6 +309,7 @@ void I2C::IRQerrorHandler(){
 
     _i2c->CR2 &=~ (I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);
     _i2c->CR1 |= I2C_CR1_STOP;
+    _state = I2C_STATE_ERROR;
 }
 
 bool I2C::waitForFlagSet(volatile uint32_t& reg, uint32_t flag){

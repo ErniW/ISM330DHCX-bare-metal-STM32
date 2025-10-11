@@ -139,13 +139,15 @@ public:
     void gyroInterruptEnable();
     volatile bool isGyroDataReady;
     FusionQuaternion quaternion;
-    uint8_t state;
+    volatile uint8_t state;
     int16_t ax;
     int16_t ay;
     int16_t az;
     int16_t gx;
     int16_t gy;
     int16_t gz;
+    uint32_t timestamp;
+    uint32_t timestampLast;
     bool requestGyro();
     bool requestAccel();
     void acquireGyroData();
@@ -157,7 +159,7 @@ private:
     float gyroCalibrationX;
     float gyroCalibrationY;
     float gyroCalibrationZ;
-    uint32_t lastTime;
+
     FusionAhrs ahrs;
     FusionOffset offset;
     KalmanFilter1D accelFilterX;

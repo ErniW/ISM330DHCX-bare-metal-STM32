@@ -191,50 +191,43 @@ float ISM330DHCX::getDt(uint8_t frequency){
     - Quaternion based.
 */
 void ISM330DHCX::getIMU() {
-    uint32_t currentTime = timerGetTime();
+
+    uint32_t delta = 0;
+
+    if(timestamp >= timestampLast)
+        delta = timestamp - timestampLast;
+    else
+        delta = (0xFFFFFFFF - timestampLast + 1) + timestamp;
+
+    float dt = delta / 1000000.0f;
+
+    timestampLast = timestamp;
 
     float gyroScale = gyroSensitivity * 0.001f;
     float accelScale = accelSensitivity;
-    
-    uint32_t delta = 0;
 
-    if(currentTime >= lastTime)
-        delta = currentTime - lastTime;
-    else
-        delta = (0xFFFFFFFF - lastTime + 1) + currentTime;
+    float axf = ax * accelScale;
+    float ayf = ay * accelScale;
+    float azf = az * accelScale;
 
-    float dt = delta / 1000000.0f;
-    
-    lastTime = currentTime;
+    axf = accelFilterX.update(axf);
+    ayf = accelFilterY.update(ayf);
+    azf = accelFilterZ.update(azf);
 
-    int16_t ax_raw, ay_raw, az_raw;
-    int16_t gx_raw, gy_raw, gz_raw;
+    float gxf = (float)gx - gyroCalibrationX;
+    float gyf = (float)gy - gyroCalibrationY;
+    float gzf = (float)gz - gyroCalibrationZ;
 
-    if(!readAccel(ax_raw, ay_raw, az_raw)) return;
-    if(!readGyro(gx_raw, gy_raw, gz_raw)) return;
+    if (fabs(gxf) < GYRO_NOISE_THRESHOLD) gxf = 0.0f;
+    if (fabs(gyf) < GYRO_NOISE_THRESHOLD) gyf = 0.0f;
+    if (fabs(gzf) < GYRO_NOISE_THRESHOLD) gzf = 0.0f;
 
-    float ax = ax_raw * accelScale;
-    float ay = ay_raw * accelScale;
-    float az = az_raw * accelScale;
+    gxf *= gyroScale;
+    gyf *= gyroScale;
+    gzf *= gyroScale;
 
-    ax = accelFilterX.update(ax);
-    ay = accelFilterY.update(ay);
-    az = accelFilterZ.update(az);
-
-    float gx = (float)gx_raw - gyroCalibrationX;
-    float gy = (float)gy_raw - gyroCalibrationY;
-    float gz = (float)gz_raw - gyroCalibrationZ;
-
-    if (fabs(gx) < GYRO_NOISE_THRESHOLD) gx = 0.0f;
-    if (fabs(gy) < GYRO_NOISE_THRESHOLD) gy = 0.0f;
-    if (fabs(gz) < GYRO_NOISE_THRESHOLD) gz = 0.0f;
-
-    gx *= gyroScale;
-    gy *= gyroScale;
-    gz *= gyroScale;
-
-    FusionVector gyroscope = {gx, gy, gz};
-    FusionVector accelerometer = {ax, ay, az};
+    FusionVector gyroscope = {gxf, gyf, gzf};
+    FusionVector accelerometer = {axf, ayf, azf};
     gyroscope = FusionOffsetUpdate(&offset, gyroscope);
     FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
     quaternion = FusionAhrsGetQuaternion(&ahrs);
