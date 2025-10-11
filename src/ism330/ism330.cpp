@@ -69,8 +69,6 @@ bool ISM330DHCX::readGyro(int16_t& x, int16_t& y, int16_t& z){
 }
 
 bool ISM330DHCX::requestGyro(){
-    // _i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6);
-
     if(!_i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6))
         return false;
 
@@ -86,16 +84,22 @@ bool ISM330DHCX::requestAccel(){
     return true;
 }
 
-void ISM330DHCX::acquireGyroData(){
+void ISM330DHCX::gyroDataReadyHandler(){
     gx = (_i2c->_packet.buffer[1] << 8 | _i2c->_packet.buffer[0]);
     gy = (_i2c->_packet.buffer[3] << 8 | _i2c->_packet.buffer[2]);
     gz = (_i2c->_packet.buffer[5] << 8 | _i2c->_packet.buffer[4]);
 }
 
-void ISM330DHCX::acquireAccelData(){
+void ISM330DHCX::accelDataReadyHandler(){
     ax = (_i2c->_packet.buffer[1] << 8 | _i2c->_packet.buffer[0]);
     ay = (_i2c->_packet.buffer[3] << 8 | _i2c->_packet.buffer[2]);
     az = (_i2c->_packet.buffer[5] << 8 | _i2c->_packet.buffer[4]);
+}
+
+void ISM330DHCX::gyroInterruptHandler(){
+    dt = getDt(timerGetTime());
+    state = IMU_STATE_GET_GYRO_DATA;
+    isGyroDataReady = false;   
 }
 
 void ISM330DHCX::calibrateGyro(uint16_t samples){
@@ -135,49 +139,33 @@ float ISM330DHCX::getAccelSensitivity(uint8_t range){
 float ISM330DHCX::getGyroSensitivity(uint8_t range){
     switch(range){
         case GYRO_125_DPS:
-            return GYRO_SENSITIVITY_125;
+            return GYRO_SENSITIVITY_125 * SEC_TO_MS;
         case GYRO_250_DPS:
-            return GYRO_SENSITIVITY_250;
+            return GYRO_SENSITIVITY_250 * SEC_TO_MS;
         case GYRO_500_DPS:
-            return GYRO_SENSITIVITY_500;
+            return GYRO_SENSITIVITY_500 * SEC_TO_MS;
         case GYRO_1000_DPS:
-            return GYRO_SENSITIVITY_1000;
+            return GYRO_SENSITIVITY_1000 * SEC_TO_MS;
         case GYRO_2000_DPS:
-            return GYRO_SENSITIVITY_2000;
+            return GYRO_SENSITIVITY_2000 * SEC_TO_MS;
         case GYRO_4000_DPS:
-            return GYRO_SENSITIVITY_4000;
+            return GYRO_SENSITIVITY_4000 * SEC_TO_MS;
         default:
-            return GYRO_SENSITIVITY_125;
+            return GYRO_SENSITIVITY_125 * SEC_TO_MS;
     }
 }
 
-float ISM330DHCX::getDt(uint8_t frequency){
-    switch(frequency){
-        case FREQ_12_5_HZ:
-            return 1.0 / 12.5;
-        case FREQ_26_HZ:
-            return 1.0 / 26.0;
-        case FREQ_52_HZ:
-            return 1.0 / 52.0;
-        case FREQ_104_HZ:
-            return 1.0 / 104.0;
-        case FREQ_208_HZ:
-            return 1.0 / 208.0;
-        case FREQ_416_HZ:
-            return 1.0 / 416.0;
-        case FREQ_833_HZ:
-            return 1.0 / 833.0;
-        case FREQ_1_66_KHZ:
-            return 1.0 / 1660.0;
-        case FREQ_3_33_KHZ:
-            return 1.0 / 3330.0;
-        case FREQ_6_66_KHZ:
-            return 1.0 / 6660.0;
-        case ACCEL_FREQ_1_6_HZ:
-            return 1.0 / 1.6;
-        default:
-            return 0;
-    }
+float ISM330DHCX::getDt(uint32_t timestamp){
+    uint32_t delta = 0;
+
+    if(timestamp >= timestampLast)
+        delta = timestamp - timestampLast;
+    else
+        delta = (0xFFFFFFFF - timestampLast + 1) + timestamp;
+
+    timestampLast = timestamp;
+
+    return (delta / 1000000.0f);
 }
 
 /*
@@ -191,24 +179,9 @@ float ISM330DHCX::getDt(uint8_t frequency){
     - Quaternion based.
 */
 void ISM330DHCX::getIMU() {
-
-    uint32_t delta = 0;
-
-    if(timestamp >= timestampLast)
-        delta = timestamp - timestampLast;
-    else
-        delta = (0xFFFFFFFF - timestampLast + 1) + timestamp;
-
-    float dt = delta / 1000000.0f;
-
-    timestampLast = timestamp;
-
-    float gyroScale = gyroSensitivity * 0.001f;
-    float accelScale = accelSensitivity;
-
-    float axf = ax * accelScale;
-    float ayf = ay * accelScale;
-    float azf = az * accelScale;
+    float axf = ax * accelSensitivity;
+    float ayf = ay * accelSensitivity;
+    float azf = az * accelSensitivity;
 
     axf = accelFilterX.update(axf);
     ayf = accelFilterY.update(ayf);
@@ -218,13 +191,13 @@ void ISM330DHCX::getIMU() {
     float gyf = (float)gy - gyroCalibrationY;
     float gzf = (float)gz - gyroCalibrationZ;
 
-    if (fabs(gxf) < GYRO_NOISE_THRESHOLD) gxf = 0.0f;
-    if (fabs(gyf) < GYRO_NOISE_THRESHOLD) gyf = 0.0f;
-    if (fabs(gzf) < GYRO_NOISE_THRESHOLD) gzf = 0.0f;
+    if(fabs(gxf) < GYRO_NOISE_THRESHOLD) gxf = 0.0f;
+    if(fabs(gyf) < GYRO_NOISE_THRESHOLD) gyf = 0.0f;
+    if(fabs(gzf) < GYRO_NOISE_THRESHOLD) gzf = 0.0f;
 
-    gxf *= gyroScale;
-    gyf *= gyroScale;
-    gzf *= gyroScale;
+    gxf *= gyroSensitivity;
+    gyf *= gyroSensitivity;
+    gzf *= gyroSensitivity;
 
     FusionVector gyroscope = {gxf, gyf, gzf};
     FusionVector accelerometer = {axf, ayf, azf};

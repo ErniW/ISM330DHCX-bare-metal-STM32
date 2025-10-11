@@ -67,11 +67,11 @@ int main(){
         if(i2c._state == I2C_STATE_DATA_READY){
             switch(ISM330.state){
                 case IMU_STATE_WAIT_FOR_GYRO_DATA:
-                    ISM330.acquireGyroData();
+                    ISM330.gyroDataReadyHandler();
                     ISM330.state = IMU_STATE_GET_ACCEL_DATA;
                     break;
                 case IMU_STATE_WAIT_FOR_ACCEL_DATA:
-                    ISM330.acquireAccelData();
+                    ISM330.accelDataReadyHandler();
                     ISM330.state = IMU_STATE_COMPUTE_FUSION;
                     break;
             }
@@ -85,12 +85,11 @@ int main(){
         }
 
         switch(ISM330.state){
-             case IMU_STATE_IDLE:
-                if(ISM330.isGyroDataReady){
-                    ISM330.timestamp = timerGetTime();
-                    ISM330.state = IMU_STATE_GET_GYRO_DATA;
-                    ISM330.isGyroDataReady = false;
-                }
+             case IMU_STATE_WAIT_FOR_INTERRUPT:
+                if(!ISM330.isGyroDataReady)
+                    break;
+
+                ISM330.gyroInterruptHandler();
                 break;
             case IMU_STATE_GET_GYRO_DATA:
                 ISM330.requestGyro();
@@ -99,14 +98,13 @@ int main(){
                 ISM330.requestAccel();
                 break;
             case IMU_STATE_COMPUTE_FUSION:
-                // printf("%d, %d, %d - %d, %d, %d\n", ISM330.gx, ISM330.gy, ISM330.gz,  ISM330.ax,  ISM330.ay, ISM330.az);
                 ISM330.getIMU();
 
-                if(cnt % 20 == 0)
+                if(cnt % 10 == 0)
                     printf("Quaternion: %.2f, %.2f, %.2f, %.2f\n", ISM330.quaternion.element.w, ISM330.quaternion.element.x, ISM330.quaternion.element.y, ISM330.quaternion.element.z);
                 cnt++;
                 
-                ISM330.state = IMU_STATE_IDLE;
+                ISM330.state = IMU_STATE_WAIT_FOR_INTERRUPT;
                 break;
             default:
                 break;
@@ -130,5 +128,5 @@ extern "C" void I2C1_EV_IRQHandler(void) {
 
 extern "C" void I2C1_ER_IRQHandler(void){
     i2c.IRQerrorHandler();
-    ISM330.state = IMU_STATE_IDLE;
+    ISM330.state = IMU_STATE_WAIT_FOR_INTERRUPT;
 }

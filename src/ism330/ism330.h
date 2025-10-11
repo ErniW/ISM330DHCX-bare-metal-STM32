@@ -99,6 +99,8 @@ enum accelRange{
 #define ACCEL_SENSITIVITY_8G    0.244
 #define ACCEL_SENSITIVITY_16G   0.488
 
+#define SEC_TO_MS               0.001f
+
 #define GYRO_SENSITIVITY_125    4.375
 #define GYRO_SENSITIVITY_250    8.75
 #define GYRO_SENSITIVITY_500    17.50
@@ -116,7 +118,7 @@ enum gyroDPS{
 };
 
 enum IMUstate{
-    IMU_STATE_IDLE,
+    IMU_STATE_WAIT_FOR_INTERRUPT,
     IMU_STATE_GET_GYRO_DATA,
     IMU_STATE_WAIT_FOR_GYRO_DATA,
     IMU_STATE_GET_ACCEL_DATA,
@@ -148,10 +150,12 @@ public:
     int16_t gz;
     uint32_t timestamp;
     uint32_t timestampLast;
+    float dt;
+    void gyroInterruptHandler();
     bool requestGyro();
     bool requestAccel();
-    void acquireGyroData();
-    void acquireAccelData();
+    void gyroDataReadyHandler();
+    void accelDataReadyHandler();
     // void getIMU();
 private:
     float gyroSensitivity;
@@ -167,7 +171,7 @@ private:
     KalmanFilter1D accelFilterZ;
     uint8_t _address;
     I2C* _i2c;
-    float getDt(uint8_t frequency);
+    float getDt(uint32_t timestamp);
     float getAccelSensitivity(uint8_t accel_range);
     float getGyroSensitivity(uint8_t gyro_range);
 };
