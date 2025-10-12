@@ -107,7 +107,7 @@ int main(){
             PROCESS ISM330 FUSION STATE MACHINE
             ------------------------------------
             Sequence:
-            1. Await gyroscope data (each reading time is depended on gyro
+            1. Await gyroscope interrupt (each reading time is depended on gyro
                data because it's mandatory for proper integration).
             2. Request Gyro data and wait for DMA transfer complete.
             3. Request Accel data and wait for DMA transfer complete.
