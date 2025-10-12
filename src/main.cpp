@@ -54,11 +54,35 @@ int main(){
 
     while(1){
 
+        /*
+            PROCESS I2C DMA TRANSFER COMPLETE 
+            ------------------------------------
+            Whenever DMA transfer is complete, set I2C state
+            to I2C_STATE_DATA_READY. Then process the state of device
+            which requested the data. Bus is released immediately after.
+
+            I2C DMA reading allows to do other things in between of readings.
+        */
+
         volatile uint8_t i2cState = i2c.getState();
 
         if(i2cState == I2C_STATE_DATA_READY){
+            /*
+                OWNERSHIP OF I2C BUS
+                -------------------------------
+                Check which device awaits the data to process its
+                state machine.
 
+                It's obsolete for a single device but for multiple
+                devices it allows to distinguish them.
+            */
             if(i2c.checkOwnership() == ISM330_ADDRESS){
+                /*
+                    UPDATE ASYNCHRONOUS STATE MACHINE
+                    ------------------------------------------
+                    Acquire data requested by device state machine
+                    and process to its next step.
+                */
                 switch(ISM330.getState()){
                     case IMU_STATE_WAIT_FOR_GYRO_DATA:
                         ISM330.gyroDataReadyHandler();
@@ -79,6 +103,22 @@ int main(){
             i2c.setState(I2C_STATE_IDLE);
         }
 
+        /*
+            PROCESS ISM330 FUSION STATE MACHINE
+            ------------------------------------
+            Sequence:
+            1. Await gyroscope data (each reading time is depended on gyro
+               data because it's mandatory for proper integration).
+            2. Request Gyro data and wait for DMA transfer complete.
+            3. Request Accel data and wait for DMA transfer complete.
+            4. Compute fusion and print it for adafruit 3d model viewer.
+            5. Wait for another interrupt.
+
+            Steps that wait for asynchronous data is handled by 
+            I2C_DATA_READY_STATE.
+
+            https://adafruit.github.io/Adafruit_WebSerial_3DModelViewer/
+        */
         switch(ISM330.getState()){
             case IMU_STATE_WAIT_FOR_INTERRUPT:
                 if(ISM330.gyroIsAvailable())
@@ -118,5 +158,5 @@ extern "C" void I2C1_ER_IRQHandler(void){
 }
 
 extern "C" void DMA1_Stream0_IRQHandler(void){
-    i2c.IRQdmaTransferCompleteHandler();
+    i2c.IRQdmaEventHandler();
 }

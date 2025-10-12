@@ -39,23 +39,22 @@ typedef struct{
 
 class I2C {
 public:
+    I2C_packet _packet;
     I2C(I2C_TypeDef* i2c, DMA_TypeDef* dma, DMA_Stream_TypeDef* dmaStream);
     void init();
+    void setState(uint8_t state);
+    volatile uint8_t getState();
+    uint8_t checkOwnership();
     bool write(uint8_t address, uint8_t reg, uint8_t data);
     bool read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     bool asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
-    void IRQdmaTransferCompleteHandler();
+    void IRQdmaEventHandler();
     void IRQerrorHandler();
+private:
     volatile uint8_t _state;
-    I2C_packet _packet;
     I2C_TypeDef* _i2c;
     DMA_TypeDef* _dma;
     DMA_Stream_TypeDef* _dmaStream;
-    uint8_t checkOwnership();
-    void setState(uint8_t state);
-    volatile uint8_t getState();
-
-private:
     bool beginRead(uint8_t address, uint8_t reg);
     bool tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);
     bool tryAsyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n);

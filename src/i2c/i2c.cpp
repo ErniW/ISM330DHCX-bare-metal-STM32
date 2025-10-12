@@ -2,8 +2,6 @@
 #include <string.h>
 #include <cstdio>
 
-// I2C::I2C (I2C_TypeDef* i2c) : _i2c(i2c) {};
-
 I2C::I2C(I2C_TypeDef* i2c, DMA_TypeDef* dma, DMA_Stream_TypeDef* dmaStream)
 {
     _i2c = i2c;
@@ -51,6 +49,18 @@ void I2C::init(){
     NVIC_EnableIRQ(DMA1_Stream0_IRQn);        
 }
 
+uint8_t I2C::checkOwnership(){
+    return _packet.addr;
+}
+
+void I2C::setState(uint8_t state){
+    _state = state;
+}
+
+volatile uint8_t I2C::getState(){
+    return _state;
+}
+
 /*
     I2C DATA WRITE PROCEDURE
     -------------------------------------
@@ -59,17 +69,14 @@ void I2C::init(){
     3. Update the register
     4. Read again to verify.
 
-    There are I2C_WRITE_RETRIES retries, before last attempt
-    the I2C bus is restarted and then we have a final attempt.
+    There are I2C_WRITE_RETRIES retries where bus is restarted before 
+    the last attempt. This function is made to guarantee correct writing 
+    so this is a blocking operation.If it's critical to system behavior
+    you can include faultHandler.
 
-    If you whish you can include faultHandler.
-
-    Further alternative would be storing every register locally
-    to avoid initial reading and improve behavior where we
-    had an error but the register become altered so we can't
-    recover its previous state.
+    Alternative would be storing value of each register to ommit
+    the first reading.
 */
-
 bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
 
     while(_state != I2C_STATE_IDLE);
@@ -114,48 +121,15 @@ bool I2C::write(uint8_t address, uint8_t reg, uint8_t data){
     return false;
 }
 
-bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
-
-    if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
-    _i2c->CR1 |= I2C_CR1_START;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
-    _i2c->DR = address << 1;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
-    (void)_i2c->SR2;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    _i2c->DR = reg;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    _i2c->DR = data;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_BTF)) return false;
-    _i2c->CR1 |= I2C_CR1_STOP;
-
-    return true;
-}
-
 /*
-    I2C DATA READ PROCEDURE
+    I2C READ DATA
     -------------------------------------
+    A blocking read operation used whenever you can't proceed forward
+    before reading the data.
 
-    In this case, because we are streaming the data we 
-    are counting number of retries on the fly where
-    incoming data is signaled by interrupt. (we don't
-    retry immediately, only when new data is available)
-
-    After 5 retries we restart I2C bus. Such errors can happen
-    if we move IMU device in our hands when it's connected
-    via a breadboard with loose cables. 
-
-    PS. I've been testing the restart procedure, it 
-    usually do the job but if I2C device hangs, only thing
-    we can do is resetting whole system. (It can be further
-    handled but I don't see a reason to do so here)
+    It has I2C_READ_RETRIES retries and it resets the bus before the
+    last attempt.
 */
-
 bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     //poprawić by było w pełni synchroniczne
@@ -176,66 +150,17 @@ bool I2C::read(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     return true;
 }
 
-bool I2C::beginRead(uint8_t address, uint8_t reg){
 
-    if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
-    _i2c->CR1 |= I2C_CR1_START;
+/*
+    I2C ASYNC READ DATA
+    -------------------------------------
+    Asynchronous DMA-based reading function. The part where we send a request
+    is handled by beginRead() which is a blocking operation. Acquirement
+    of data is done by DMA.
 
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
-    _i2c->DR = address << 1;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
-    (void)_i2c->SR2;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    _i2c->DR = reg;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
-    _i2c->CR1 |= I2C_CR1_START;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
-    _i2c->DR = address << 1 | 1;
-
-    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
-    (void)_i2c->SR2;
-
-    return true;
-}
-
-bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
-
-    if(!beginRead(address, reg))
-        return false;
-
-    if(n == 1) {
-        _i2c->CR1 &= ~I2C_CR1_ACK;
-        _i2c->CR1 |= I2C_CR1_STOP;
-
-        (void)_i2c->SR2;
-        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
-        *buffer = _i2c->DR;
-        return true;
-    }
-
-    _i2c->CR1 |= I2C_CR1_ACK;
-    (void)_i2c->SR2;
-
-    while (n > 0) {
-        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
-
-        if (n == 2) {
-            _i2c->CR1 &= ~I2C_CR1_ACK;
-            _i2c->CR1 |= I2C_CR1_STOP;
-        }
-
-        *buffer++ = _i2c->DR;
-        n--;
-    }
-
-    
-    return true;
-}
-
+    When data is ready the state flag is set to I2C_STATE_DATA_READY where
+    you can handle the response and proceed to next reading sequence.
+*/
 bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
 
     while(_state != I2C_STATE_IDLE);
@@ -269,7 +194,103 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     return true;
 }
 
-void I2C::IRQdmaTransferCompleteHandler(){
+bool I2C::beginRead(uint8_t address, uint8_t reg){
+
+    if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
+    _i2c->CR1 |= I2C_CR1_START;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
+    _i2c->DR = address << 1;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    (void)_i2c->SR2;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    _i2c->DR = reg;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    _i2c->CR1 |= I2C_CR1_START;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
+    _i2c->DR = address << 1 | 1;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    (void)_i2c->SR2;
+
+    return true;
+}
+
+/*
+    I2C WRITE ATTEMPT
+    -------------------------------------
+    Write data to a single register. It carefully checks flag of
+    each step.
+
+    For writing you should use write().
+*/
+bool I2C::tryWrite(uint8_t address, uint8_t reg, uint8_t data){
+
+    if(!waitForFlagClear(_i2c->SR2, I2C_SR2_BUSY)) return false;
+    _i2c->CR1 |= I2C_CR1_START;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_SB)) return false;
+    _i2c->DR = address << 1;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_ADDR)) return false;
+    (void)_i2c->SR2;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    _i2c->DR = reg;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_TXE)) return false;
+    _i2c->DR = data;
+
+    if(!waitForFlagSet(_i2c->SR1, I2C_SR1_BTF)) return false;
+    _i2c->CR1 |= I2C_CR1_STOP;
+
+    return true;
+}
+
+/*
+    I2C READ ATTEMPT
+    -------------------------------------
+    Read n bits of data from a register. It carefully checks flag of
+    each step.
+*/
+bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
+
+    if(!beginRead(address, reg))
+        return false;
+
+    if(n == 1) {
+        _i2c->CR1 &= ~I2C_CR1_ACK;
+        _i2c->CR1 |= I2C_CR1_STOP;
+
+        (void)_i2c->SR2;
+        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+        *buffer = _i2c->DR;
+        return true;
+    }
+
+    _i2c->CR1 |= I2C_CR1_ACK;
+    (void)_i2c->SR2;
+
+    while (n > 0) {
+        if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
+
+        if (n == 2) {
+            _i2c->CR1 &= ~I2C_CR1_ACK;
+            _i2c->CR1 |= I2C_CR1_STOP;
+        }
+
+        *buffer++ = _i2c->DR;
+        n--;
+    }
+
+    return true;
+}
+
+void I2C::IRQdmaEventHandler(){
     if (_dma->LISR & DMA_LISR_TCIF0){
         _dma->LIFCR = DMA_LIFCR_CTCIF0;
         _dmaStream->CR &= ~DMA_SxCR_EN;
@@ -379,14 +400,3 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
     return I2C_OK;
 }
 
-uint8_t I2C::checkOwnership(){
-    return _packet.addr;
-}
-
-void I2C::setState(uint8_t state){
-    _state = state;
-}
-
-volatile uint8_t I2C::getState(){
-    return _state;
-}

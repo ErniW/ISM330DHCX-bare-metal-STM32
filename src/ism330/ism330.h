@@ -129,14 +129,10 @@ enum IMUstate{
 class ISM330DHCX {
 public:
     FusionQuaternion quaternion;
-    
-    volatile bool isGyroDataReady;
     ISM330DHCX(uint8_t address, I2C* i2c);
     void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
-
     volatile uint8_t getState();
     void setState(uint8_t state);
-
     bool gyroIsAvailable();
     void gyroSetDataAvailable();
     void gyroInterruptEnable();
@@ -145,18 +141,14 @@ public:
     void gyroDataReadyHandler();
     void gyroCalibrate(uint16_t samples);
     bool gyroReadBlocking(int16_t& x, int16_t& y, int16_t& z);
-   
     bool accelRequest();
     void accelDataReadyHandler();
     bool accelReadBlocking(int16_t& x, int16_t& y, int16_t& z);
-
     void computeIMU();
-
     void pedometerEnable();
     uint16_t pedometeRead();
     void singleTapEnable();
     uint8_t singleTapRead();
-
 private:
     volatile uint8_t _state;
     uint8_t _address;
@@ -169,6 +161,7 @@ private:
     int16_t gz;
     float dt;
     uint32_t timestampLast;
+    volatile bool isGyroDataReady;
     float gyroSensitivity;
     float accelSensitivity;
     float gyroCalibrationX;
