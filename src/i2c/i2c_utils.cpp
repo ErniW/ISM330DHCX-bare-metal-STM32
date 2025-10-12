@@ -39,6 +39,9 @@ void I2C1_manualRestart(){
 }
 
 void I2C1_gpioConfig(){
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+    RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
+
     GPIOB->MODER &=~ (GPIO_MODER_MODE8 | GPIO_MODER_MODE9);
     GPIOB->MODER |= PB8_AF_MODE | PB9_AF_MODE;
 

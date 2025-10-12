@@ -10,7 +10,7 @@
 
 #define GYRO_NOISE_THRESHOLD 10
 
-#define ADDRESS     0x6A
+#define ISM330_ADDRESS     0x6A
 
 #define FUNC_CFG_ACCESS     0x01
 #define EMB_FUNC_EN_A       0x04
@@ -129,11 +129,16 @@ enum IMUstate{
 class ISM330DHCX {
 public:
     FusionQuaternion quaternion;
-    volatile uint8_t state;
+    
     volatile bool isGyroDataReady;
     ISM330DHCX(uint8_t address, I2C* i2c);
     void init(uint8_t accelFreq, uint8_t accelSensitivity, uint8_t gyroFreq, uint8_t gyroDPS);
 
+    volatile uint8_t getState();
+    void setState(uint8_t state);
+
+    bool gyroIsAvailable();
+    void gyroSetDataAvailable();
     void gyroInterruptEnable();
     void gyroInterruptHandler();
     bool gyroRequest();
@@ -151,7 +156,10 @@ public:
     uint16_t pedometeRead();
     void singleTapEnable();
     uint8_t singleTapRead();
+
 private:
+    volatile uint8_t _state;
+    uint8_t _address;
     FusionAhrs ahrs;
     int16_t ax;
     int16_t ay;
@@ -170,7 +178,6 @@ private:
     KalmanFilter1D accelFilterY;
     KalmanFilter1D accelFilterZ;
     FusionOffset offset;
-    uint8_t _address;
     I2C* _i2c;
     float getDt(uint32_t timestamp);
     float getAccelSensitivity(uint8_t accel_range);

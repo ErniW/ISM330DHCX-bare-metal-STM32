@@ -70,7 +70,7 @@ bool ISM330DHCX::gyroRequest(){
     if(!_i2c->asyncRead(_address, READ_GYRO, _i2c->_packet.buffer, 6))
         return false;
 
-    state = IMU_STATE_WAIT_FOR_GYRO_DATA;
+    _state = IMU_STATE_WAIT_FOR_GYRO_DATA;
     return true;
 }
 
@@ -78,7 +78,7 @@ bool ISM330DHCX::accelRequest(){
     if(!_i2c->asyncRead(_address, READ_ACCEL, _i2c->_packet.buffer, 6))
         return false;
         
-    state = IMU_STATE_WAIT_FOR_ACCEL_DATA;
+    _state = IMU_STATE_WAIT_FOR_ACCEL_DATA;
     return true;
 }
 
@@ -96,7 +96,7 @@ void ISM330DHCX::accelDataReadyHandler(){
 
 void ISM330DHCX::gyroInterruptHandler(){
     dt = getDt(timerGetTime());
-    state = IMU_STATE_GET_GYRO_DATA;
+    _state = IMU_STATE_GET_GYRO_DATA;
     isGyroDataReady = false;   
 }
 
@@ -247,3 +247,18 @@ uint8_t ISM330DHCX::singleTapRead(){
     return state;
 }
 
+volatile uint8_t ISM330DHCX::getState(){
+    return _state;
+}
+
+void ISM330DHCX::setState(uint8_t state){
+    _state = state;
+}
+
+bool ISM330DHCX::gyroIsAvailable(){
+    return isGyroDataReady;
+}
+
+void ISM330DHCX::gyroSetDataAvailable(){
+    isGyroDataReady = true;
+}

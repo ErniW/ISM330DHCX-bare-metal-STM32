@@ -4,7 +4,7 @@
 *It was my experiment with some concepts, never intended to publish. Later I decided to finish it. I mostly code bare-metal stuff in C but here for reasons I don't remember is C++.*
 
 ### Some features:
-- **Fully developed I2C with DMA** (for reading), error detection, write verification, bus recovery, retries.
+- **Fully developed I2C with DMA** (DMA for reading), safety-focused with error detection, write verification, retries, bus ownership and bus recovery.
 - **Data noise reduction** with offset calibration, noise threshold, kalman filter.
 - **Interrupt-driven measurment** of gyroscope data for proper integration with internal timer to compute d_t.
 - **Non-blocking state machine** for Reading gyroscope, accelerometer and sensor fusion.
@@ -12,6 +12,7 @@
 
 ### Possible improvements:
 - I think my read->update->verify mechanism can be done differently. Manually setting clear mask manually is annoying.
+- Ownership mechanism isn't fully developed as it doesn't make sense with a single device on a bus.
 
 *Sensor's documentation: https://www.st.com/resource/en/datasheet/ism330dhcx.pdf*
 

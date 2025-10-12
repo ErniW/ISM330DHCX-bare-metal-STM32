@@ -224,7 +224,6 @@ bool I2C::tryRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
         if(!waitForFlagSet(_i2c->SR1, I2C_SR1_RXNE)) return false;
 
         if (n == 2) {
-            // Prepare NACK + STOP before reading N-1
             _i2c->CR1 &= ~I2C_CR1_ACK;
             _i2c->CR1 |= I2C_CR1_STOP;
         }
@@ -246,8 +245,6 @@ bool I2C::asyncRead(uint8_t address, uint8_t reg, uint8_t* buffer, uint8_t n){
     _packet.addr = address;
     _packet.reg = reg;
     _packet.index = 0;
-    // _packet.error_counter = 0;
-    // _packet.read_buffer_ptr = buffer;
     _packet.length = n;
     
     if(!beginRead(address, reg)) {
@@ -293,25 +290,6 @@ void I2C::IRQdmaTransferCompleteHandler(){
         _state = I2C_STATE_ERROR;
     }
 }
-
- void I2C::IRQhandler(){
-    uint32_t SR1_tmp = _i2c->SR1;
-
-    if (SR1_tmp & I2C_SR1_RXNE) {
-        _packet.buffer[_packet.index++] = _i2c->DR;
-
-        if (_packet.index == _packet.length - 1) {
-            _i2c->CR1 &= ~I2C_CR1_ACK;
-            _i2c->CR1 |= I2C_CR1_STOP;
-        }
-
-    
-        if (_packet.index >= _packet.length) {
-            _i2c->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN );
-            _state = I2C_STATE_DATA_READY;
-        }
-    }
- }
 
 void I2C::IRQerrorHandler(){
 
@@ -399,4 +377,16 @@ uint8_t I2C::checkErrors(uint16_t timeout) {
     }
 
     return I2C_OK;
+}
+
+uint8_t I2C::checkOwnership(){
+    return _packet.addr;
+}
+
+void I2C::setState(uint8_t state){
+    _state = state;
+}
+
+volatile uint8_t I2C::getState(){
+    return _state;
 }
