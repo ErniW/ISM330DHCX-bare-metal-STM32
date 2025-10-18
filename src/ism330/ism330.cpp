@@ -138,19 +138,19 @@ float ISM330DHCX::getAccelSensitivity(uint8_t range){
 float ISM330DHCX::getGyroSensitivity(uint8_t range){
     switch(range){
         case GYRO_125_DPS:
-            return GYRO_SENSITIVITY_125 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_125 * MDPS_TO_DPS;
         case GYRO_250_DPS:
-            return GYRO_SENSITIVITY_250 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_250 * MDPS_TO_DPS;
         case GYRO_500_DPS:
-            return GYRO_SENSITIVITY_500 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_500 * MDPS_TO_DPS;
         case GYRO_1000_DPS:
-            return GYRO_SENSITIVITY_1000 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_1000 * MDPS_TO_DPS;
         case GYRO_2000_DPS:
-            return GYRO_SENSITIVITY_2000 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_2000 * MDPS_TO_DPS;
         case GYRO_4000_DPS:
-            return GYRO_SENSITIVITY_4000 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_4000 * MDPS_TO_DPS;
         default:
-            return GYRO_SENSITIVITY_125 * SEC_TO_MS;
+            return GYRO_SENSITIVITY_125 * MDPS_TO_DPS;
     }
 }
 

@@ -99,7 +99,7 @@ enum accelRange{
 #define ACCEL_SENSITIVITY_8G    0.244
 #define ACCEL_SENSITIVITY_16G   0.488
 
-#define SEC_TO_MS               0.001f
+#define MDPS_TO_DPS               0.001f
 
 #define GYRO_SENSITIVITY_125    4.375
 #define GYRO_SENSITIVITY_250    8.75
