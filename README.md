@@ -21,9 +21,11 @@
 
 *Application note: https://www.st.com/resource/en/application_note/an5398-ism330dhcx-alwayson-3d-accelerometer-and-3d-gyroscope-with-digital-output-for-industrial-applications-stmicroelectronics.pdf*
 
-### Harware used
+### Hardware used
 - STM32F446RE
 - Adafruit ISM330DHCX module
+
+*Interrupt pin INT1 is connected to Pin C12. SDL and SDA are connected to I2C1 via D15/D14 on Arduino-like pins.*
 
 ### Build, compile and upload:
 1. In root `CMakeLists.txt` change the CMSIS directory or copy CMSIS to `CMSIS` folder. Furthermore, if you have a different board you must update the files, see the structure of `STM32F446RE` folder.

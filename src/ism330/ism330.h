@@ -99,14 +99,16 @@ enum accelRange{
 #define ACCEL_SENSITIVITY_8G    0.244
 #define ACCEL_SENSITIVITY_16G   0.488
 
-#define MDPS_TO_DPS               0.001f
-
 #define GYRO_SENSITIVITY_125    4.375
 #define GYRO_SENSITIVITY_250    8.75
 #define GYRO_SENSITIVITY_500    17.50
 #define GYRO_SENSITIVITY_1000   35.0
 #define GYRO_SENSITIVITY_2000   70.0
 #define GYRO_SENSITIVITY_4000   140.0
+
+#define MDPS_TO_DPS             0.001f
+#define MG_TO_G                 0.001f
+#define US_TO_S                 0.000001f
 
 enum gyroDPS{
     GYRO_4000_DPS = 1,

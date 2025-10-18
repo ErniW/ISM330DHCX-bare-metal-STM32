@@ -123,15 +123,15 @@ void ISM330DHCX::gyroCalibrate(uint16_t samples){
 float ISM330DHCX::getAccelSensitivity(uint8_t range){
     switch(range){
         case ACCEL_2G:
-            return ACCEL_SENSITIVITY_2G;
+            return ACCEL_SENSITIVITY_2G * MG_TO_G;
         case ACCEL_4G:
-            return ACCEL_SENSITIVITY_4G;
+            return ACCEL_SENSITIVITY_4G * MG_TO_G;
         case ACCEL_8G:
-            return ACCEL_SENSITIVITY_8G;
+            return ACCEL_SENSITIVITY_8G * MG_TO_G;
         case ACCEL_16G:
-            return ACCEL_SENSITIVITY_16G;   
+            return ACCEL_SENSITIVITY_16G * MG_TO_G;  
         default:
-            return ACCEL_SENSITIVITY_2G;
+            return ACCEL_SENSITIVITY_2G * MG_TO_G;
     }
 }
 
@@ -164,7 +164,7 @@ float ISM330DHCX::getDt(uint32_t timestamp){
 
     timestampLast = timestamp;
 
-    return (delta / 1000000.0f);
+    return (delta * US_TO_S);
 }
 
 /*
